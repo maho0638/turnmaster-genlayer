@@ -1,0 +1,315 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "genlayer-js";
+import { testnetBradbury } from "genlayer-js/chains";
+import {
+  Activity, ArrowUpRight, Bell, BriefcaseBusiness,
+  Check, ChevronDown, CircleAlert, CircleHelp, Clock3, Command, ExternalLink,
+  FileText, Filter, Gavel, LockKeyhole, Menu, Plus,
+  Search, Shield, Wallet, X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ContractWorkflow } from "@/app/contract-workflow";
+import { deployOnchainJob, formatWeiGen, isContractAddress, readOnchainJob, transactionError, type Eip1193Provider, type OnchainJob, type TxResult } from "@/lib/turnmaster-chain";
+import type { Address } from "viem";
+
+type Status = "Open" | "Funded" | "Claimed" | "Delivered" | "Revision requested" | "In review" | "Undetermined" | "Resolved" | "Cancelled";
+type Job = { id: string; title: string; client: string; initials: string; color: string; category: string; reward: string; due: string; status: Status; criteria: string[]; evidence?: string[]; note?: string; sample: boolean; description?: string; deliveryDefinition?: string; proofType?: string; contractAddress?: string; chainJob?: OnchainJob; chainTx?: TxResult };
+const starterJobs: Job[] = [
+  { id: "TM-024", title: "Audit the onboarding flow", client: "Northstar DAO", initials: "N", color: "blue", category: "Product", reward: "320 GEN", due: "Oct 12", status: "Funded", criteria: ["Record a full first-time user journey from connect wallet through first task.", "List every blocking issue with a screenshot and browser details.", "Deliver a prioritized report with at least five actionable findings."], evidence: ["Sample repository reference · no live artifact"], sample: true },
+  { id: "TM-023", title: "Translate governance proposal", client: "Open Guild", initials: "O", color: "violet", category: "Writing", reward: "180 GEN", due: "Oct 14", status: "In review", criteria: ["Translate the approved English proposal into Spanish.", "Keep all vote options, dates, and links unchanged.", "Submit an editable document and a final PDF."], evidence: ["Sample document reference · no live artifact"], note: "Submitted 2h ago", sample: true },
+  { id: "TM-022", title: "Design a token claim page", client: "Lattice Labs", initials: "L", color: "green", category: "Design", reward: "450 GEN", due: "Oct 18", status: "Open", criteria: ["Provide a responsive desktop and mobile Figma prototype.", "Include connect, eligibility, and confirmed claim states.", "Use the supplied brand assets and meet WCAG AA contrast."], sample: true },
+  { id: "TM-021", title: "Build a snapshot export script", client: "Field Notes", initials: "F", color: "amber", category: "Engineering", reward: "600 GEN", due: "Oct 09", status: "Delivered", criteria: ["Export the latest 90 days of votes as newline-delimited JSON.", "Document setup and include one example output file.", "Pass the supplied fixture tests without network access."], evidence: ["Sample repository reference · no live artifact"], note: "Submitted yesterday", sample: true },
+  { id: "TM-020", title: "Create community welcome kit", client: "Commons Hub", initials: "C", color: "rose", category: "Community", reward: "240 GEN", due: "Resolved", status: "Resolved", criteria: ["Deliver a concise welcome guide and moderator checklist.", "Include verified links to all five community channels."], sample: true },
+];
+const statuses: ("All" | Status)[] = ["All", "Open", "Funded", "Claimed", "Delivered", "Revision requested", "In review", "Undetermined", "Resolved", "Cancelled"];
+const network = { id: "0x107d", chainId: 4221, name: "Bradbury Testnet", currency: "GEN", rpcUrls: ["https://rpc-bradbury.genlayer.com"], blockExplorerUrls: ["https://explorer-bradbury.genlayer.com"] };
+const feeRecipientConfig = process.env.NEXT_PUBLIC_TURNMASTER_FEE_RECIPIENT ?? "";
+
+function statusFromChain(status: string): Status {
+  const labels: Record<string, Status> = { open: "Open", funded: "Funded", claimed: "Claimed", delivered: "Delivered", revision_requested: "Revision requested", disputed: "In review", undetermined: "Undetermined", resolved: "Resolved", cancelled: "Cancelled" };
+  return labels[status] ?? "Undetermined";
+}
+
+function jobFromChain(address: string, record: OnchainJob, tx?: TxResult): Job {
+  return {
+    id: `${address.slice(0, 6)}…${address.slice(-4)}`,
+    title: record.title,
+    client: `${record.client.slice(0, 6)}…${record.client.slice(-4)}`,
+    initials: "T",
+    color: "blue",
+    category: record.proof_type || "On-chain job",
+    reward: `${formatWeiGen(record.reward_wei)} GEN`,
+    due: new Date(record.deadline * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    status: statusFromChain(record.status),
+    criteria: record.acceptance_criteria,
+    evidence: record.delivery?.evidence_urls,
+    note: "Bradbury Testnet · verified contract read",
+    sample: false,
+    description: record.description,
+    deliveryDefinition: record.delivery_definition,
+    proofType: record.proof_type,
+    contractAddress: address,
+    chainJob: record,
+    chainTx: tx,
+  };
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  const cls: Record<Status, string> = { Open: "status-open", Funded: "status-funded", Claimed: "status-funded", Delivered: "status-delivered", "Revision requested": "status-review", "In review": "status-review", Undetermined: "status-cancelled", Resolved: "status-resolved", Cancelled: "status-cancelled" };
+  return <span className={`status ${cls[status]}`}><i />{status}</span>;
+}
+function BrandMark() { return <span className="brand-mark"><span /><span /><span /></span>; }
+
+function TermsCopy({ job }: { job: Job }) {
+  if (!job.description && !job.deliveryDefinition) return null;
+  return <div className="detail-section terms-copy">
+    {job.description && <div><h4>Job description</h4><p>{job.description}</p></div>}
+    {job.deliveryDefinition && <div><h4>Required delivery</h4><p>{job.deliveryDefinition}</p></div>}
+    {job.proofType && <span>Evidence type · {job.proofType}</span>}
+  </div>;
+}
+
+export default function Home() {
+  const [jobs, setJobs] = useState(starterJobs);
+  const [activeStatus, setActiveStatus] = useState<"All" | Status>("All");
+  const [selected, setSelected] = useState<Job>(starterJobs[0]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [contractInput, setContractInput] = useState("");
+  const [chainBusy, setChainBusy] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [walletProvider, setWalletProvider] = useState<Eip1193Provider | null>(null);
+  const [walletMessage, setWalletMessage] = useState("");
+  const [wrongNetwork, setWrongNetwork] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [criteria, setCriteria] = useState([""]);
+  const [form, setForm] = useState({ title: "", description: "", delivery: "", proofType: "Public URL", due: "", reward: "", fee: "1.5" });
+  const [formError, setFormError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    const onShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); searchRef.current?.focus(); }
+    };
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
+  }, []);
+
+  useEffect(() => {
+    const context = (document as Document & {
+      modelContext?: {
+        registerTool: (tool: {
+          name: string;
+          title: string;
+          description: string;
+          inputSchema: object;
+          annotations: { readOnlyHint: boolean; untrustedContentHint: boolean };
+          execute: (input: unknown) => { state: string; transaction: string } | Promise<{ state: string; transaction: string }>;
+        }, options?: { signal?: AbortSignal }) => void | Promise<void>;
+      };
+    }).modelContext;
+    if (!context?.registerTool) return;
+    const lifecycle = new AbortController();
+    const registration = context.registerTool({
+      name: "start_job_creation",
+      title: "Start job creation",
+      description: "Open the TurnMaster job form so the user can review and enter the terms. This does not create a draft, deploy a contract, or submit a transaction.",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      annotations: { readOnlyHint: false, untrustedContentHint: false },
+      execute: async (input) => {
+        if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length > 0) {
+          throw new Error("This action accepts an empty object. Enter job terms in the visible form.");
+        }
+        setFormError("");
+        setCreateOpen(true);
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+        return { state: "job_form_open", transaction: "none" };
+      },
+    }, { signal: lifecycle.signal });
+    void Promise.resolve(registration).catch(() => setNotice("The agent action could not be registered in this browser."));
+    return () => lifecycle.abort();
+  }, []);
+
+  useEffect(() => {
+    const provider = walletProvider;
+    if (!provider?.on) return;
+    const onChainChanged = (value: unknown) => {
+      const chainId = typeof value === "string" ? Number.parseInt(value, 16) : NaN;
+      const isWrong = chainId !== network.chainId;
+      setWrongNetwork(isWrong);
+      setWalletMessage(isWrong ? "Wallet network changed. TurnMaster contract actions are paused until Bradbury Testnet is selected." : "Wallet is connected to Bradbury Testnet.");
+    };
+    const onAccountsChanged = (value: unknown) => {
+      const accounts = Array.isArray(value) ? value : [];
+      setWalletAddress(typeof accounts[0] === "string" ? accounts[0] : "");
+      setWalletMessage(accounts.length ? "Wallet account changed." : "Wallet disconnected.");
+    };
+    provider.on("chainChanged", onChainChanged);
+    provider.on("accountsChanged", onAccountsChanged);
+    return () => {
+      provider.removeListener?.("chainChanged", onChainChanged);
+      provider.removeListener?.("accountsChanged", onAccountsChanged);
+    };
+  }, [walletProvider]);
+
+  const filtered = useMemo(() => jobs.filter((job) => (activeStatus === "All" || job.status === activeStatus) && `${job.title} ${job.client} ${job.category}`.toLowerCase().includes(query.toLowerCase())), [jobs, activeStatus, query]);
+  const connectWallet = async () => {
+    setWalletMessage("");
+    const provider = (window as Window & { ethereum?: Eip1193Provider }).ethereum;
+    if (!provider) { setWalletMessage("No EIP-1193 wallet detected. Install a compatible wallet to connect."); return; }
+    setWalletProvider(provider);
+    try {
+      const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
+      if (!accounts?.[0]) { setWalletMessage("Wallet returned no account."); return; }
+      const chainHex = await provider.request({ method: "eth_chainId" }) as string;
+      if (Number.parseInt(chainHex, 16) !== network.chainId) {
+        setWrongNetwork(true);
+        try { await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.id }] }); setWrongNetwork(false); }
+        catch (switchError) {
+          if ((switchError as { code?: number }).code === 4902) await provider.request({ method: "wallet_addEthereumChain", params: [network] });
+          const verify = await provider.request({ method: "eth_chainId" }) as string;
+          if (Number.parseInt(verify, 16) !== network.chainId) { setWalletAddress(accounts[0]); setWalletMessage("Connected, but still on the wrong network. TurnMaster actions remain disabled."); return; }
+          setWrongNetwork(false);
+        }
+      }
+      const genlayerClient = createClient({ chain: testnetBradbury, account: accounts[0] as `0x${string}`, provider: provider as never });
+      await genlayerClient.connect("testnetBradbury");
+      setWalletAddress(accounts[0]); setWalletMessage("Wallet connected to GenLayer Bradbury Testnet.");
+    } catch (error) { setWalletMessage(transactionError(error)); }
+  };
+  const createDraft = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setFormError("");
+    const usable = criteria.map((x) => x.trim());
+    if (!form.title.trim() || !form.description.trim() || !form.delivery.trim() || !form.due || !form.reward) { setFormError("Complete every required field before saving the draft."); return; }
+    if (usable.length === 0 || usable.some((x) => x.length < 18)) { setFormError("Each acceptance criterion must be specific and at least 18 characters."); return; }
+    if (!Number.isFinite(Number(form.reward)) || Number(form.reward) <= 0) { setFormError("Reward must be greater than zero."); return; }
+    const job: Job = { id: `DRAFT-${String(jobs.length + 1).padStart(3, "0")}`, title: form.title.trim(), client: walletAddress ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}` : "You", initials: "Y", color: "blue", category: "Draft", reward: `${form.reward} GEN`, due: new Date(form.due).toLocaleDateString("en-US", { month: "short", day: "numeric" }), status: "Open", criteria: usable, note: "Page-session draft · not on-chain", sample: false };
+    setJobs((current) => [job, ...current]); setSelected(job); setActiveStatus("All"); setCreateOpen(false); setNotice("Draft added to this page session only. No chain transaction was made.");
+  };
+
+  const createOnchain = async () => {
+    setFormError("");
+    const usable = criteria.map((item) => item.trim());
+    if (!walletAddress || !walletProvider) { setFormError("Connect a wallet before deploying a job contract."); return; }
+    if (wrongNetwork) { setFormError("Switch to GenLayer Bradbury Testnet before deploying."); return; }
+    if (!form.title.trim() || form.title.trim().length < 4 || form.description.trim().length < 20 || form.delivery.trim().length < 8 || !form.due || !form.reward) { setFormError("Add a title, a 20-character description, a delivery definition, deadline, and reward."); return; }
+    if (usable.length === 0 || usable.length > 12 || usable.some((item) => item.length < 18)) { setFormError("Provide 1–12 acceptance criteria, each at least 18 characters."); return; }
+    if (!Number.isFinite(Number(form.fee)) || Number(form.fee) < 0 || Number(form.fee) > 100) { setFormError("Release fee must be between 0 and 100 percent."); return; }
+    if (!Number.isInteger(Number(form.fee) * 100)) { setFormError("Release fee can have at most two decimal places."); return; }
+    const deadline = Math.floor(Date.parse(`${form.due}T23:59:59Z`) / 1000);
+    if (!Number.isFinite(deadline) || deadline <= Math.floor(Date.now() / 1000)) { setFormError("Choose a future deadline."); return; }
+    setChainBusy(true);
+    setFormError("Confirm the Bradbury deployment and network fee in your wallet. Keep this page open until finalization.");
+    try {
+      const result = await deployOnchainJob({
+        provider: walletProvider,
+        walletAddress: walletAddress as Address,
+        title: form.title,
+        description: form.description,
+        deliveryDefinition: form.delivery,
+        criteria: usable,
+        proofType: form.proofType,
+        deadline,
+        reward: form.reward,
+        commissionPercent: form.fee,
+        feeRecipient: feeRecipientConfig,
+      });
+      const job = jobFromChain(result.address, result.job, result.tx);
+      setJobs((current) => [job, ...current.filter((item) => item.contractAddress?.toLowerCase() !== result.address.toLowerCase())]);
+      setSelected(job);
+      setActiveStatus("All");
+      setCreateOpen(false);
+      setNotice("Contract deployment finalized. The job terms are on Bradbury; escrow is not funded yet.");
+      setFormError("");
+    } catch (error) {
+      setFormError(transactionError(error));
+    } finally {
+      setChainBusy(false);
+    }
+  };
+
+  const importContract = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setWalletMessage("");
+    const address = contractInput.trim();
+    if (!isContractAddress(address)) { setWalletMessage("Enter a valid 0x contract address."); return; }
+    setChainBusy(true);
+    try {
+      const record = await readOnchainJob(address as Address);
+      const job = jobFromChain(address, record);
+      setJobs((current) => [job, ...current.filter((item) => item.contractAddress?.toLowerCase() !== address.toLowerCase())]);
+      setSelected(job);
+      setActiveStatus("All");
+      setImportOpen(false);
+      setContractInput("");
+      setNotice("Contract state loaded from Bradbury. Displayed terms are read from chain.");
+    } catch (error) {
+      setWalletMessage(transactionError(error));
+    } finally {
+      setChainBusy(false);
+    }
+  };
+
+  const updateOnchainJob = (address: string, record: OnchainJob, tx?: TxResult) => {
+    const previous = jobs.find((item) => item.contractAddress?.toLowerCase() === address.toLowerCase());
+    const updated = jobFromChain(address, record, tx ?? previous?.chainTx);
+    setJobs((current) => current.map((item) => item.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : item));
+    setSelected((current) => current.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : current);
+  };
+
+  return <main className="app-shell">
+    <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
+      <div className="brand"><BrandMark /><span>turnmaster</span><span className="brand-tag">V1</span></div>
+      <div className="workspace-switch"><span className="workspace-icon">T</span><span><b>TurnMaster</b><small>Bradbury workspace</small></span><ChevronDown size={15} /></div>
+      <div className="nav-label">WORKSPACE</div>
+      <nav aria-label="Main navigation" className="main-nav">
+        <button className="nav-item nav-active" onClick={() => { setActiveStatus("All"); setMobileNav(false); }}><BriefcaseBusiness size={17} />Work board<span className="nav-count">{jobs.length}</span></button>
+        <button className="nav-item" onClick={() => { setActiveStatus("Funded"); setMobileNav(false); }}><LockKeyhole size={17} />My escrow</button>
+        <button className="nav-item" onClick={() => { setActiveStatus("In review"); setMobileNav(false); }}><Gavel size={17} />Reviews<span className="nav-dot" /></button>
+        <button className="nav-item" onClick={() => { setActiveStatus("Resolved"); setMobileNav(false); }}><Activity size={17} />Activity</button>
+      </nav>
+      <div className="nav-label nav-label-spaced">MANAGE</div>
+      <nav className="main-nav"><button className="nav-item" onClick={() => setCreateOpen(true)}><Plus size={17} />Create a job</button><button className="nav-item" onClick={() => setNotice("Fee policy: 1.5% default on successfully released testnet rewards only. No commission is charged on refunds.")}><FileText size={17} />Fee policy</button></nav>
+      <div className="sidebar-bottom"><div className="help-card"><div className="help-icon"><Shield size={17} /></div><b>Testnet only</b><p>No real funds or legal arbitration. Every on-chain action needs wallet confirmation.</p><a href="https://docs.genlayer.com/developers/networks" target="_blank" rel="noreferrer">Network details <ExternalLink size={12} /></a></div><div className="profile"><span className="profile-avatar">{walletAddress ? walletAddress.slice(2, 4).toUpperCase() : "G"}</span><span><b>{walletAddress ? `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}` : "Guest workspace"}</b><small>{walletAddress ? "Wallet connected" : "Connect to get started"}</small></span><ChevronDown size={15} /></div></div>
+    </aside>
+
+    <section className="main-area">
+      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress ? <button className="wallet-connected" title={walletAddress}><span className="connected-dot" />{walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}<ChevronDown size={14} /></button> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
+      <div className="preview-banner"><span className="preview-dot" /><b>LOCAL PREVIEW</b><span>Sample records are illustrative · New contracts use Bradbury Testnet only</span><button aria-label="What does local preview mean?" onClick={() => setNotice("This is an unpublished local preview. Sample records are illustrative. New job contracts can be deployed to Bradbury; this browser does not have a shared on-chain job index.")}><CircleHelp size={15} /></button></div>
+      <div className="content-wrap">
+        <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />WORKSPACE OVERVIEW</div><h1>Work board</h1><p className="page-subtitle">A clear agreement first. Payment after the work is verified.</p></div><div className="heading-actions"><Button variant="outline" onClick={() => { setContractInput(""); setImportOpen(true); }}><ExternalLink size={15}/>Open contract</Button><Button className="primary-action" onClick={() => { setCreateOpen(true); setFormError(""); }}><Plus size={17} />Create a job</Button></div></div>
+        <div className="summary-grid" aria-label="Work board summary"><div className="summary-card"><div className="summary-head"><span>Open work</span><span className="summary-icon icon-blue"><BriefcaseBusiness size={16} /></span></div><strong>{jobs.filter(x => x.status === "Open" || x.status === "Funded").length.toString().padStart(2,"0")}</strong><small>Ready to be picked up</small></div><div className="summary-card"><div className="summary-head"><span>Needs review</span><span className="summary-icon icon-amber"><Clock3 size={16} /></span></div><strong>{jobs.filter(x => x.status === "In review" || x.status === "Delivered").length.toString().padStart(2,"0")}</strong><small>Waiting on client decision</small></div><div className="summary-card"><div className="summary-head"><span>Testnet escrow</span><span className="summary-icon icon-violet"><LockKeyhole size={16} /></span></div><strong>— <em>GEN</em></strong><small>No contract connected</small></div><div className="summary-card fee-card"><div className="summary-head"><span>Release fee</span><span className="summary-icon icon-green"><ArrowUpRight size={16} /></span></div><strong>1.5<em>%</em></strong><small>Only on successful release</small></div></div>
+        <div className="board-toolbar"><div className="board-title"><div><h2>Recent work</h2><span>{filtered.length} records</span></div><span className="sample-label"><span />SAMPLE DATA</span></div><div className="board-controls"><label className="search-box"><Search size={16} /><input ref={searchRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search work" aria-label="Search work" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}<kbd><Command size={11} /> K</kbd></label><label className="filter-button"><Filter size={15} /><span className="sr-only">Filter by status</span><select value={activeStatus} onChange={e => setActiveStatus(e.target.value as "All" | Status)} aria-label="Filter by status">{statuses.map(s=><option value={s} key={s}>{s === "All" ? "All status" : s}</option>)}</select></label></div></div>
+        <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as "All" | Status)} className="status-tabs"><TabsList className="status-tab-list" aria-label="Filter work by status">{statuses.map((status) => <TabsTrigger className="status-tab" key={status} value={status}>{status}{status === "All" && <span>{jobs.length}</span>}</TabsTrigger>)}</TabsList></Tabs>
+        <div className="work-layout"><div className="job-list" aria-label="Work items">{filtered.length ? filtered.map(job => <button key={job.id} className={`job-row ${selected.id === job.id ? "job-row-selected" : ""}`} onClick={() => { setSelected(job); setDetailOpen(true); }}><span className={`client-mark ${job.color}`}>{job.initials}</span><span className="job-main"><span className="job-title">{job.title}{job.sample && <span className="sample-mini">SAMPLE</span>}</span><span className="job-meta"><span>{job.client}</span><i />{job.category}<i />{job.id}</span></span><span className="job-status"><StatusBadge status={job.status} />{job.note && <small>{job.note}</small>}</span><span className="job-reward"><b>{job.reward}</b><small>Due {job.due}</small></span><ChevronDown className="row-chevron" size={16} /></button>) : <div className="empty-state"><span><Search size={21} /></span><h3>No work found</h3><p>Try another search or choose a different status.</p><button onClick={() => {setQuery("");setActiveStatus("All");}}>Clear filters</button></div>}</div>
+          <aside className="detail-card"><div className="detail-topline"><span className="eyebrow-small">WORK ITEM · {selected.id}</span><button className="more-button" aria-label="More work actions" onClick={() => setNotice("Available actions depend on the work status and connected contract.")}><span>•••</span></button></div><div className="detail-heading"><span className={`client-mark large ${selected.color}`}>{selected.initials}</span><div><h3>{selected.title}</h3><p>Created by {selected.client}</p></div></div><div className="detail-badges"><StatusBadge status={selected.status} />{selected.sample && <span className="sample-outline">SAMPLE</span>}</div><div className="detail-divider"/><div className="detail-facts"><div><span>REWARD</span><b>{selected.reward}</b></div><div><span>DEADLINE</span><b>{selected.due}</b></div><div><span>ESCROW</span><b className="escrow-none"><i />{selected.sample ? "Sample only" : selected.chainJob?.funded ? `${formatWeiGen(selected.chainJob.escrow_wei ?? selected.chainJob.reward_wei)} GEN` : "Not funded"}</b></div></div><div className="detail-section"><div className="detail-section-title"><h4>Acceptance criteria</h4><span>{selected.criteria.length} items</span></div><ol className="criteria-list">{selected.criteria.map((item,i)=><li key={i}><span>{String(i+1).padStart(2,"0")}</span><p>{item}</p></li>)}</ol></div><TermsCopy job={selected}/>{selected.evidence?.length ? <div className="detail-section"><div className="detail-section-title"><h4>Delivery evidence</h4><span>{selected.sample ? "Sample reference" : "On-chain links"}</span></div>{selected.evidence.map((item,i)=><p className="evidence-sample" key={i}><FileText size={14}/>{item}</p>)}</div> : null}{selected.contractAddress && selected.chainJob ? <ContractWorkflow contractAddress={selected.contractAddress} walletAddress={wrongNetwork ? "" : walletAddress} provider={wrongNetwork ? null : walletProvider} job={selected.chainJob} lastTx={selected.chainTx} onUpdated={(record, tx) => updateOnchainJob(selected.contractAddress!, record, tx)} /> : <><div className="detail-warning"><CircleAlert size={16}/><p><b>On-chain actions unavailable</b><span>{selected.sample ? "This clearly marked sample has no contract." : "This is a page-session draft; no contract is deployed for it."}</span></p></div><button className="detail-secondary" onClick={() => { setContractInput(""); setImportOpen(true); }}>Open a Bradbury contract</button></>}</aside></div>
+        <footer className="page-footer"><span><BrandMark/>TurnMaster <span className="footer-version">V1 preview</span></span><span>GenLayer Bradbury Testnet <i />Contracts deploy per job</span><a href="https://docs.genlayer.com" target="_blank" rel="noreferrer">GenLayer docs <ExternalLink size={12}/></a></footer>
+      </div>
+    </section>
+
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="create-dialog"><DialogHeader><div className="dialog-eyebrow">NEW WORK ITEM <span>01 / 01</span></div><DialogTitle>Create a job</DialogTitle><DialogDescription>Write the terms clearly. Deploy them as a Bradbury contract or add a page-session draft.</DialogDescription></DialogHeader><form onSubmit={createDraft} className="job-form"><div className="preview-inline"><CircleAlert size={15}/><span>Add a browser-only draft, or deploy these frozen terms to Bradbury. An on-chain job starts unfunded; you deposit the reward in a separate confirmed transaction.</span></div><label>Job title<input autoFocus maxLength={90} value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. Review the v2 governance proposal" required/></label><label>What needs to be done?<textarea rows={3} maxLength={1200} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Describe the work and its boundaries." required/></label><label>What will be delivered?<textarea rows={2} maxLength={700} value={form.delivery} onChange={e=>setForm({...form,delivery:e.target.value})} placeholder="Name the files, links, format, or outcome." required/></label><fieldset className="criteria-field"><legend>Acceptance criteria <small>Measurable checks</small></legend>{criteria.map((value,i)=><div className="criterion-input" key={i}><span>{String(i+1).padStart(2,"0")}</span><input aria-label={`Acceptance criterion ${i+1}`} maxLength={260} value={value} onChange={e=>setCriteria(criteria.map((v,j)=>j===i?e.target.value:v))} placeholder="A reviewer can verify that…"/><button type="button" onClick={()=>setCriteria(criteria.filter((_,j)=>i!==j))} aria-label={`Remove criterion ${i+1}`} disabled={criteria.length===1}><X size={15}/></button></div>)}<button type="button" className="add-criterion" onClick={()=>setCriteria([...criteria,""])}><Plus size={14}/>Add criterion</button><small className="field-hint">Be specific. Use a result that can be checked from the submitted evidence.</small></fieldset><div className="form-row"><label>Evidence type<select value={form.proofType} onChange={e=>setForm({...form,proofType:e.target.value})}><option>Public URL</option><option>Repository link</option><option>Document link</option><option>Text response</option></select></label><label>Deadline<input type="date" min={new Date().toISOString().slice(0,10)} value={form.due} onChange={e=>setForm({...form,due:e.target.value})} required/></label></div><div className="form-row"><label>Reward <span className="input-unit">GEN</span><input type="number" min="0.000001" step="any" value={form.reward} onChange={e=>setForm({...form,reward:e.target.value})} placeholder="0.00" required/></label><label>Release fee <span className="input-unit">%</span><input type="number" min="0" max="100" step="0.1" value={form.fee} onChange={e=>setForm({...form,fee:e.target.value})}/></label></div><p className="fee-explain"><Shield size={14}/>Release fee: {Number(form.fee||0)}% on successful release; 0% on refunds. Bradbury Testnet only. A non-zero fee needs a configured recipient; none is configured in this build.</p><div className="chain-create-summary"><b>Bradbury Testnet · Chain 4221</b><span>Deploy job terms only · Reward {form.reward || "0"} GEN is not deposited in this step</span><span>Your wallet will show the testnet transaction fee before you approve.</span></div>{formError&&<p className="form-error" role="alert"><CircleAlert size={15}/>{formError}</p>}<DialogFooter><Button type="button" variant="outline" onClick={()=>setCreateOpen(false)}>Cancel</Button><Button type="submit" className="session-draft-action"><FileText size={15}/>Add session draft</Button><Button type="button" className="primary-action" onClick={createOnchain} disabled={chainBusy||!walletAddress||wrongNetwork||(Number(form.fee)>0&&!isContractAddress(feeRecipientConfig))}><Wallet size={15}/>{chainBusy?"Deploying…":"Deploy terms on Bradbury"}</Button></DialogFooter></form></DialogContent></Dialog>
+
+    <Dialog open={importOpen} onOpenChange={setImportOpen}>
+      <DialogContent className="detail-dialog">
+        <DialogHeader><DialogTitle>Open a Bradbury contract</DialogTitle><DialogDescription>Read a TurnMaster job directly from its GenLayer contract address. This does not submit a transaction.</DialogDescription></DialogHeader>
+        <form className="import-contract-form" onSubmit={importContract}>
+          <label>Job contract address<input autoFocus value={contractInput} onChange={(event) => setContractInput(event.target.value)} placeholder="0x…" spellCheck={false} autoCapitalize="off" autoCorrect="off" required /></label>
+          <p>Network: Bradbury Testnet · 4221. Only the address and public contract state are read.</p>
+          <DialogFooter><Button type="button" variant="outline" onClick={() => setImportOpen(false)}>Cancel</Button><Button type="submit" className="primary-action" disabled={chainBusy}>{chainBusy ? "Reading contract…" : "Read contract"}</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={detailOpen} onOpenChange={setDetailOpen}><DialogContent className="detail-dialog"><DialogHeader><DialogTitle>{selected.title}</DialogTitle><DialogDescription>{selected.id} · {selected.status}{selected.sample ? " · Sample record" : selected.contractAddress ? " · Bradbury Testnet contract" : " · Browser-only draft"}</DialogDescription></DialogHeader><div className="mobile-detail-scroll"><p className="dialog-copy">Acceptance criteria</p><ol className="criteria-list">{selected.criteria.map((item,i)=><li key={i}><span>{String(i+1).padStart(2,"0")}</span><p>{item}</p></li>)}</ol><TermsCopy job={selected}/>{selected.contractAddress && selected.chainJob ? <ContractWorkflow contractAddress={selected.contractAddress} walletAddress={wrongNetwork ? "" : walletAddress} provider={wrongNetwork ? null : walletProvider} job={selected.chainJob} lastTx={selected.chainTx} onUpdated={(record, tx) => updateOnchainJob(selected.contractAddress!, record, tx)} /> : <div className="detail-warning"><CircleAlert size={16}/><p><b>On-chain actions unavailable</b><span>{selected.sample ? "This marked sample has no contract." : "This browser-only draft has no deployed contract."}</span></p></div>}</div><DialogFooter><Button variant="outline" onClick={() => setDetailOpen(false)}>Close</Button></DialogFooter></DialogContent></Dialog>
+
+    {notice&&<div className="toast-message" role="status"><span><CircleAlert size={16}/>{notice}</span><button aria-label="Dismiss message" onClick={()=>setNotice("")}><X size={15}/></button></div>}
+    {walletMessage&&<div className="wallet-message" role="status"><span>{walletAddress?<Check size={15}/>:<CircleAlert size={15}/>} {walletMessage}</span><button onClick={()=>setWalletMessage("")} aria-label="Dismiss"><X size={14}/></button></div>}
+  </main>;
+}
