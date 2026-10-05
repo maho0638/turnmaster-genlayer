@@ -25,7 +25,7 @@ npm ci
 npm run dev
 ```
 
-The app is English-only and responsive. Wallet connection uses the official `genlayer-js` stable API and `testnetBradbury` preset. The expected network is Bradbury Testnet (chain ID 4221). The wallet may ask to add or switch to that network. Each wallet transaction asks the user to approve the relevant testnet network fee.
+The app is English-only and responsive. Wallet connection uses the official `genlayer-js` stable API and `testnetBradbury` preset. The expected network is Bradbury Testnet (chain ID 4221). The app's wallet-add metadata is unit-checked against the installed SDK preset. Contract controls and transaction SDK code load on demand so the initial work board stays lean. The wallet may ask to add or switch to that network. Each wallet transaction asks the user to approve the relevant testnet network fee.
 
 ## GenLayer network and SDK
 
@@ -52,9 +52,10 @@ Install the test-only dependency and run GenLayer's direct-mode tests:
 ```bash
 python -m pip install -r requirements-test.txt
 python -m pytest tests/test_contract_direct.py -q
+npm run test:network
 ```
 
-The suite pins the direct runner to runtime `v0.2.12` because the then-current tool default attempted to fetch an unavailable `v0.3.0-rc7` artifact. Tests cover creation, invalid terms, exact funding, unauthorized actions, claim, deadline restrictions, delivery, revisions, acceptance, dispute evidence, evidence retrieval/evaluator outcomes, undetermined results, payment/refund idempotency, and cancellation. The local direct-mode VM mocks evidence retrieval and evaluator responses; this is not a substitute for a Bradbury transaction or validator consensus test. See [`QA_REPORT.md`](QA_REPORT.md) for the checks completed in this build.
+The suite pins the direct runner to runtime `v0.2.12` because the then-current tool default attempted to fetch an unavailable `v0.3.0-rc7` artifact. Tests cover creation, invalid terms, exact funding, unauthorized actions, claim, deadline restrictions, delivery, revisions, acceptance, dispute evidence, evidence retrieval/evaluator outcomes, malformed or conflicting adjudication reports, undetermined results, payment/refund idempotency, and cancellation. The network unit test compares wallet-add parameters to the installed Bradbury SDK preset. The local direct-mode VM mocks evidence retrieval and evaluator responses; this is not a substitute for a Bradbury transaction or validator consensus test. See [`QA_REPORT.md`](QA_REPORT.md) for the checks completed in this build.
 
 ## Testnet use and fee configuration
 

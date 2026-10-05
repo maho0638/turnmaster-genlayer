@@ -188,6 +188,33 @@ def test_dispute_with_retrievable_evidence_uses_genlayer_equivalence(escrow):
     assert len(report["evidence"]["worker"]) == 2
 
 
+@pytest.mark.parametrize(
+    "evaluation",
+    [
+        {"outcome": "release_to_worker", "reasoning": "The evidence looks correct.", "criteria": [{"criterion": "A different criterion was checked.", "result": "pass", "reasoning": "The other check passed."}]},
+        {"outcome": "release_to_worker", "reasoning": "The criterion failed.", "criteria": [{"criterion": CRITERION, "result": "fail", "reasoning": "The evidence shows failure."}]},
+        {"outcome": "refund_client", "reasoning": "The criterion passed.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": "The evidence shows success."}]},
+        {"outcome": "refund_client", "reasoning": "The criterion is unclear.", "criteria": [{"criterion": CRITERION, "result": "unverifiable", "reasoning": "The source is inconclusive."}]},
+        {"outcome": "release_to_worker", "reasoning": "The criterion passed.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": ""}]},
+        {"outcome": "pay_someone", "reasoning": "Unsupported outcome.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": "The evidence is available."}]},
+    ],
+)
+def test_malformed_or_conflicting_genlayer_reports_never_settle(escrow, evaluation):
+    vm, job = escrow
+    fund(vm, job)
+    claim_and_deliver(vm, job)
+    vm.sender = CLIENT
+    job.open_dispute("The evidence needs a neutral criteria review.")
+    vm.mock_web("https://example.org/evidence", {"status": 200, "body": "A public test report with verifiable results."})
+    vm.mock_llm("Evaluate the submitted work", json.dumps(evaluation))
+    job.resolve_dispute()
+    record = json.loads(job.get_job())
+    report = json.loads(record["decision"])
+    assert record["status"] == "undetermined"
+    assert report["outcome"] == "undetermined"
+    assert record["payout_queued"] is False
+
+
 def test_client_can_refund_undelivered_job_after_deadline(escrow):
     vm, job = escrow
     fund(vm, job)

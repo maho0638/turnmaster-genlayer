@@ -315,6 +315,8 @@ FROZEN JOB TERMS:
         )
         try:
             report = json.loads(result)
+            if not isinstance(report, dict):
+                raise ValueError("The review report must be a JSON object")
             outcome = report.get("outcome")
             criterion_results = report.get("criteria")
             allowed = ("release_to_worker", "refund_client", "undetermined")
@@ -326,6 +328,19 @@ FROZEN JOB TERMS:
                 outcome = "undetermined"
                 report["outcome"] = outcome
                 report["reasoning"] = "At least one criterion result was malformed or unverifiable. No payment was released."
+            expected_criteria = json.loads(criteria)
+            if outcome != "undetermined" and [item.get("criterion") for item in criterion_results] != expected_criteria:
+                outcome = "undetermined"
+                report["outcome"] = outcome
+                report["reasoning"] = "The review did not return the exact frozen criteria in order. No payment was released."
+            if not isinstance(report.get("reasoning"), str) or not report["reasoning"].strip() or any(not isinstance(item.get("reasoning"), str) or not item["reasoning"].strip() for item in criterion_results):
+                outcome = "undetermined"
+                report["outcome"] = outcome
+                report["reasoning"] = "The review omitted a readable explanation for the decision or a criterion. No payment was released."
+            if outcome != "undetermined" and any(item.get("result") == "unverifiable" for item in criterion_results):
+                outcome = "undetermined"
+                report["outcome"] = outcome
+                report["reasoning"] = "At least one criterion could not be verified. No payment was released."
             if outcome == "release_to_worker" and any(item.get("result") != "pass" for item in criterion_results):
                 outcome = "undetermined"
                 report["outcome"] = outcome

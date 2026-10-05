@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createClient } from "genlayer-js";
-import { testnetBradbury } from "genlayer-js/chains";
+import dynamic from "next/dynamic";
 import {
   Activity, ArrowUpRight, Bell, BriefcaseBusiness,
   Check, ChevronDown, CircleAlert, CircleHelp, Clock3, Command, ExternalLink,
@@ -12,9 +11,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ContractWorkflow } from "@/app/contract-workflow";
-import { deployOnchainJob, formatWeiGen, isContractAddress, readOnchainJob, transactionError, type Eip1193Provider, type OnchainJob, type TxResult } from "@/lib/turnmaster-chain";
+import type { Eip1193Provider, OnchainJob, TxResult } from "@/lib/turnmaster-chain";
+import { BRADBURY_CHAIN_ID, BRADBURY_WALLET_NETWORK, formatWeiGen, isEvmAddress } from "@/lib/genlayer-network.mjs";
 import type { Address } from "viem";
+
+const ContractWorkflow = dynamic(() => import("@/app/contract-workflow").then((module) => module.ContractWorkflow), {
+  ssr: false,
+  loading: () => <p className="chain-no-action" role="status">Loading contract controls…</p>,
+});
 
 type Status = "Open" | "Funded" | "Claimed" | "Delivered" | "Revision requested" | "In review" | "Undetermined" | "Resolved" | "Cancelled";
 type Job = { id: string; title: string; client: string; initials: string; color: string; category: string; reward: string; due: string; status: Status; criteria: string[]; evidence?: string[]; note?: string; sample: boolean; description?: string; deliveryDefinition?: string; proofType?: string; contractAddress?: string; chainJob?: OnchainJob; chainTx?: TxResult };
@@ -26,7 +30,8 @@ const starterJobs: Job[] = [
   { id: "TM-020", title: "Create community welcome kit", client: "Commons Hub", initials: "C", color: "rose", category: "Community", reward: "240 GEN", due: "Resolved", status: "Resolved", criteria: ["Deliver a concise welcome guide and moderator checklist.", "Include verified links to all five community channels."], sample: true },
 ];
 const statuses: ("All" | Status)[] = ["All", "Open", "Funded", "Claimed", "Delivered", "Revision requested", "In review", "Undetermined", "Resolved", "Cancelled"];
-const network = { id: "0x107d", chainId: 4221, name: "Bradbury Testnet", currency: "GEN", rpcUrls: ["https://rpc-bradbury.genlayer.com"], blockExplorerUrls: ["https://explorer-bradbury.genlayer.com"] };
+const network = BRADBURY_WALLET_NETWORK;
+const networkChainId = BRADBURY_CHAIN_ID;
 const feeRecipientConfig = process.env.NEXT_PUBLIC_TURNMASTER_FEE_RECIPIENT ?? "";
 
 function statusFromChain(status: string): Status {
@@ -90,7 +95,7 @@ export default function Home() {
   const searchRef = useRef<HTMLInputElement>(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [criteria, setCriteria] = useState([""]);
-  const [form, setForm] = useState({ title: "", description: "", delivery: "", proofType: "Public URL", due: "", reward: "", fee: "1.5" });
+  const [form, setForm] = useState({ title: "", description: "", delivery: "", proofType: "Public URL", due: "", reward: "", fee: isEvmAddress(feeRecipientConfig) ? "1.5" : "0" });
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -142,7 +147,7 @@ export default function Home() {
     if (!provider?.on) return;
     const onChainChanged = (value: unknown) => {
       const chainId = typeof value === "string" ? Number.parseInt(value, 16) : NaN;
-      const isWrong = chainId !== network.chainId;
+      const isWrong = chainId !== networkChainId;
       setWrongNetwork(isWrong);
       setWalletMessage(isWrong ? "Wallet network changed. TurnMaster contract actions are paused until Bradbury Testnet is selected." : "Wallet is connected to Bradbury Testnet.");
     };
@@ -169,20 +174,21 @@ export default function Home() {
       const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
       if (!accounts?.[0]) { setWalletMessage("Wallet returned no account."); return; }
       const chainHex = await provider.request({ method: "eth_chainId" }) as string;
-      if (Number.parseInt(chainHex, 16) !== network.chainId) {
+      if (Number.parseInt(chainHex, 16) !== networkChainId) {
         setWrongNetwork(true);
-        try { await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.id }] }); setWrongNetwork(false); }
+        try { await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.chainId }] }); setWrongNetwork(false); }
         catch (switchError) {
           if ((switchError as { code?: number }).code === 4902) await provider.request({ method: "wallet_addEthereumChain", params: [network] });
           const verify = await provider.request({ method: "eth_chainId" }) as string;
-          if (Number.parseInt(verify, 16) !== network.chainId) { setWalletAddress(accounts[0]); setWalletMessage("Connected, but still on the wrong network. TurnMaster actions remain disabled."); return; }
+          if (Number.parseInt(verify, 16) !== networkChainId) { setWalletAddress(accounts[0]); setWalletMessage("Connected, but still on the wrong network. TurnMaster actions remain disabled."); return; }
           setWrongNetwork(false);
         }
       }
+      const [{ createClient }, { testnetBradbury }] = await Promise.all([import("genlayer-js"), import("genlayer-js/chains")]);
       const genlayerClient = createClient({ chain: testnetBradbury, account: accounts[0] as `0x${string}`, provider: provider as never });
       await genlayerClient.connect("testnetBradbury");
       setWalletAddress(accounts[0]); setWalletMessage("Wallet connected to GenLayer Bradbury Testnet.");
-    } catch (error) { setWalletMessage(transactionError(error)); }
+    } catch (error) { const { transactionError } = await import("@/lib/turnmaster-chain"); setWalletMessage(transactionError(error)); }
   };
   const createDraft = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setFormError("");
@@ -208,6 +214,7 @@ export default function Home() {
     setChainBusy(true);
     setFormError("Confirm the Bradbury deployment and network fee in your wallet. Keep this page open until finalization.");
     try {
+      const { deployOnchainJob } = await import("@/lib/turnmaster-chain");
       const result = await deployOnchainJob({
         provider: walletProvider,
         walletAddress: walletAddress as Address,
@@ -229,6 +236,7 @@ export default function Home() {
       setNotice("Contract deployment finalized. The job terms are on Bradbury; escrow is not funded yet.");
       setFormError("");
     } catch (error) {
+      const { transactionError } = await import("@/lib/turnmaster-chain");
       setFormError(transactionError(error));
     } finally {
       setChainBusy(false);
@@ -239,9 +247,10 @@ export default function Home() {
     event.preventDefault();
     setWalletMessage("");
     const address = contractInput.trim();
-    if (!isContractAddress(address)) { setWalletMessage("Enter a valid 0x contract address."); return; }
+    if (!isEvmAddress(address)) { setWalletMessage("Enter a valid 0x contract address."); return; }
     setChainBusy(true);
     try {
+      const { readOnchainJob } = await import("@/lib/turnmaster-chain");
       const record = await readOnchainJob(address as Address);
       const job = jobFromChain(address, record);
       setJobs((current) => [job, ...current.filter((item) => item.contractAddress?.toLowerCase() !== address.toLowerCase())]);
@@ -251,6 +260,7 @@ export default function Home() {
       setContractInput("");
       setNotice("Contract state loaded from Bradbury. Displayed terms are read from chain.");
     } catch (error) {
+      const { transactionError } = await import("@/lib/turnmaster-chain");
       setWalletMessage(transactionError(error));
     } finally {
       setChainBusy(false);
@@ -294,7 +304,7 @@ export default function Home() {
       </div>
     </section>
 
-    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="create-dialog"><DialogHeader><div className="dialog-eyebrow">NEW WORK ITEM <span>01 / 01</span></div><DialogTitle>Create a job</DialogTitle><DialogDescription>Write the terms clearly. Deploy them as a Bradbury contract or add a page-session draft.</DialogDescription></DialogHeader><form onSubmit={createDraft} className="job-form"><div className="preview-inline"><CircleAlert size={15}/><span>Add a browser-only draft, or deploy these frozen terms to Bradbury. An on-chain job starts unfunded; you deposit the reward in a separate confirmed transaction.</span></div><label>Job title<input autoFocus maxLength={90} value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. Review the v2 governance proposal" required/></label><label>What needs to be done?<textarea rows={3} maxLength={1200} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Describe the work and its boundaries." required/></label><label>What will be delivered?<textarea rows={2} maxLength={700} value={form.delivery} onChange={e=>setForm({...form,delivery:e.target.value})} placeholder="Name the files, links, format, or outcome." required/></label><fieldset className="criteria-field"><legend>Acceptance criteria <small>Measurable checks</small></legend>{criteria.map((value,i)=><div className="criterion-input" key={i}><span>{String(i+1).padStart(2,"0")}</span><input aria-label={`Acceptance criterion ${i+1}`} maxLength={260} value={value} onChange={e=>setCriteria(criteria.map((v,j)=>j===i?e.target.value:v))} placeholder="A reviewer can verify that…"/><button type="button" onClick={()=>setCriteria(criteria.filter((_,j)=>i!==j))} aria-label={`Remove criterion ${i+1}`} disabled={criteria.length===1}><X size={15}/></button></div>)}<button type="button" className="add-criterion" onClick={()=>setCriteria([...criteria,""])}><Plus size={14}/>Add criterion</button><small className="field-hint">Be specific. Use a result that can be checked from the submitted evidence.</small></fieldset><div className="form-row"><label>Evidence type<select value={form.proofType} onChange={e=>setForm({...form,proofType:e.target.value})}><option>Public URL</option><option>Repository link</option><option>Document link</option><option>Text response</option></select></label><label>Deadline<input type="date" min={new Date().toISOString().slice(0,10)} value={form.due} onChange={e=>setForm({...form,due:e.target.value})} required/></label></div><div className="form-row"><label>Reward <span className="input-unit">GEN</span><input type="number" min="0.000001" step="any" value={form.reward} onChange={e=>setForm({...form,reward:e.target.value})} placeholder="0.00" required/></label><label>Release fee <span className="input-unit">%</span><input type="number" min="0" max="100" step="0.1" value={form.fee} onChange={e=>setForm({...form,fee:e.target.value})}/></label></div><p className="fee-explain"><Shield size={14}/>Release fee: {Number(form.fee||0)}% on successful release; 0% on refunds. Bradbury Testnet only. A non-zero fee needs a configured recipient; none is configured in this build.</p><div className="chain-create-summary"><b>Bradbury Testnet · Chain 4221</b><span>Deploy job terms only · Reward {form.reward || "0"} GEN is not deposited in this step</span><span>Your wallet will show the testnet transaction fee before you approve.</span></div>{formError&&<p className="form-error" role="alert"><CircleAlert size={15}/>{formError}</p>}<DialogFooter><Button type="button" variant="outline" onClick={()=>setCreateOpen(false)}>Cancel</Button><Button type="submit" className="session-draft-action"><FileText size={15}/>Add session draft</Button><Button type="button" className="primary-action" onClick={createOnchain} disabled={chainBusy||!walletAddress||wrongNetwork||(Number(form.fee)>0&&!isContractAddress(feeRecipientConfig))}><Wallet size={15}/>{chainBusy?"Deploying…":"Deploy terms on Bradbury"}</Button></DialogFooter></form></DialogContent></Dialog>
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="create-dialog"><DialogHeader><div className="dialog-eyebrow">NEW WORK ITEM <span>01 / 01</span></div><DialogTitle>Create a job</DialogTitle><DialogDescription>Write the terms clearly. Deploy them as a Bradbury contract or add a page-session draft.</DialogDescription></DialogHeader><form onSubmit={createDraft} className="job-form"><div className="preview-inline"><CircleAlert size={15}/><span>Add a browser-only draft, or deploy these frozen terms to Bradbury. An on-chain job starts unfunded; you deposit the reward in a separate confirmed transaction.</span></div><label>Job title<input autoFocus maxLength={90} value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. Review the v2 governance proposal" required/></label><label>What needs to be done?<textarea rows={3} maxLength={1200} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Describe the work and its boundaries." required/></label><label>What will be delivered?<textarea rows={2} maxLength={700} value={form.delivery} onChange={e=>setForm({...form,delivery:e.target.value})} placeholder="Name the files, links, format, or outcome." required/></label><fieldset className="criteria-field"><legend>Acceptance criteria <small>Measurable checks</small></legend>{criteria.map((value,i)=><div className="criterion-input" key={i}><span>{String(i+1).padStart(2,"0")}</span><input aria-label={`Acceptance criterion ${i+1}`} maxLength={260} value={value} onChange={e=>setCriteria(criteria.map((v,j)=>j===i?e.target.value:v))} placeholder="A reviewer can verify that…"/><button type="button" onClick={()=>setCriteria(criteria.filter((_,j)=>i!==j))} aria-label={`Remove criterion ${i+1}`} disabled={criteria.length===1}><X size={15}/></button></div>)}<button type="button" className="add-criterion" onClick={()=>setCriteria([...criteria,""])}><Plus size={14}/>Add criterion</button><small className="field-hint">Be specific. Use a result that can be checked from the submitted evidence.</small></fieldset><div className="form-row"><label>Evidence type<select value={form.proofType} onChange={e=>setForm({...form,proofType:e.target.value})}><option>Public URL</option><option>Repository link</option><option>Document link</option><option>Text response</option></select></label><label>Deadline<input type="date" min={new Date().toISOString().slice(0,10)} value={form.due} onChange={e=>setForm({...form,due:e.target.value})} required/></label></div><div className="form-row"><label>Reward <span className="input-unit">GEN</span><input type="number" min="0.000001" step="any" value={form.reward} onChange={e=>setForm({...form,reward:e.target.value})} placeholder="0.00" required/></label><label>Release fee <span className="input-unit">%</span><input type="number" min="0" max="100" step="0.1" value={form.fee} onChange={e=>setForm({...form,fee:e.target.value})}/></label></div><p className="fee-explain"><Shield size={14}/>Release fee: {Number(form.fee||0)}% on successful release; 0% on refunds. Bradbury Testnet only. {isEvmAddress(feeRecipientConfig) ? "The configured recipient is active for non-zero fees." : "No fee recipient is configured; use 0% until one is set."}</p><div className="chain-create-summary"><b>Bradbury Testnet · Chain 4221</b><span>Deploy job terms only · Reward {form.reward || "0"} GEN is not deposited in this step</span><span>Your wallet will show the testnet transaction fee before you approve.</span></div>{formError&&<p className="form-error" role="alert"><CircleAlert size={15}/>{formError}</p>}<DialogFooter><Button type="button" variant="outline" onClick={()=>setCreateOpen(false)}>Cancel</Button><Button type="submit" className="session-draft-action"><FileText size={15}/>Add session draft</Button><Button type="button" className="primary-action" onClick={createOnchain} disabled={chainBusy||!walletAddress||wrongNetwork||(Number(form.fee)>0&&!isEvmAddress(feeRecipientConfig))}><Wallet size={15}/>{chainBusy?"Deploying…":"Deploy terms on Bradbury"}</Button></DialogFooter></form></DialogContent></Dialog>
 
     <Dialog open={importOpen} onOpenChange={setImportOpen}>
       <DialogContent className="detail-dialog">
