@@ -27,6 +27,10 @@ npm run dev
 
 The app is English-only and responsive. Wallet connection uses the official `genlayer-js` stable API and `testnetBradbury` preset. The expected network is Bradbury Testnet (chain ID 4221). The app's wallet-add metadata is unit-checked against the installed SDK preset. Contract controls and transaction SDK code load on demand so the initial work board stays lean. The wallet may ask to add or switch to that network. Each wallet transaction asks the user to approve the relevant testnet network fee.
 
+## Deploy a preview on Vercel
+
+The repository includes `vercel.json` and a Next.js production build script for Vercel. Import `maho0638/turnmaster-genlayer` from [Vercel New Project](https://vercel.com/new). Vercel uses the Next.js framework preset, `npm ci`, and `npm run build:vercel`. The regular Sites preview continues to use its Cloudflare Worker adapter. Contract source is copied from the tested Python source into `public/` before development and builds so both Next.js and the Sites/Vite build can load it. No environment variables are required to test zero-fee Bradbury jobs. Keep the wallet on Bradbury Testnet and use only test GEN. The Next.js/Vercel production build could not be completed in this task environment because it blocks a worker process requested by Turbopack; verify the first Vercel build log before testing the deployed app.
+
 ## GenLayer network and SDK
 
 - Network: Bradbury Testnet

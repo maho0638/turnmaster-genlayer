@@ -7,11 +7,15 @@
   },
   "scripts": {
     "install:ci": "node scripts/install-ci.mjs",
+    "predev": "node scripts/sync-contract-source.mjs",
     "dev": "node scripts/run-framework.mjs dev",
+    "prebuild": "node scripts/sync-contract-source.mjs",
     "build": "node scripts/run-framework.mjs build",
+    "prebuild:vercel": "node scripts/sync-contract-source.mjs",
+    "build:vercel": "next build",
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test:network": "node --test tests/genlayer-network.test.mjs",
+    "test:network": "node --test tests/genlayer-network.test.mjs tests/contract-source.test.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {

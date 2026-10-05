@@ -2,7 +2,6 @@ import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus, type CalldataEncodable, type DecodedDeployData, type TransactionHash } from "genlayer-js/types";
 import { isAddress, parseEther, type Address } from "viem";
-import escrowSource from "../contracts/TurnMasterEscrow.py?raw";
 
 export type Eip1193Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -138,6 +137,15 @@ export async function deployOnchainJob(input: {
       throw new Error("A valid platform fee recipient must be configured before using a non-zero release fee.");
     }
     feeRecipient = input.feeRecipient;
+  }
+
+  const sourceResponse = await fetch("/TurnMasterEscrow.py", { cache: "no-store" });
+  if (!sourceResponse.ok) {
+    throw new Error("The public TurnMaster contract source could not be loaded. No wallet transaction was sent.");
+  }
+  const escrowSource = await sourceResponse.text();
+  if (!escrowSource.includes("class TurnMasterEscrow") || !escrowSource.includes("def __init__")) {
+    throw new Error("The downloaded TurnMaster contract source is invalid. No wallet transaction was sent.");
   }
 
   const client = writeClient(input.walletAddress, input.provider);
