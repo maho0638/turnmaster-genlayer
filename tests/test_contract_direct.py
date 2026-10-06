@@ -174,10 +174,7 @@ def test_dispute_with_retrievable_evidence_uses_genlayer_equivalence(escrow):
     vm.sender = WORKER
     job.submit_dispute_evidence('["https://example.org/evidence"]')
     vm.mock_web("https://example.org/evidence", {"status": 200, "body": "The public report verifies the requested feature and its passing test."})
-    vm.mock_llm(
-        "Evaluate the submitted work",
-        json.dumps({"outcome": "release_to_worker", "reasoning": "The public evidence supports the required output.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": "The report verifies the work."}]}),
-    )
+    vm.mock_llm("Evaluate the submitted work", json.dumps(["pass"]))
     job.resolve_dispute()
     record = json.loads(job.get_job())
     assert record["status"] == "resolved", record["decision"]
@@ -188,18 +185,8 @@ def test_dispute_with_retrievable_evidence_uses_genlayer_equivalence(escrow):
     assert len(report["evidence"]["worker"]) == 2
 
 
-@pytest.mark.parametrize(
-    "evaluation",
-    [
-        {"outcome": "release_to_worker", "reasoning": "The evidence looks correct.", "criteria": [{"criterion": "A different criterion was checked.", "result": "pass", "reasoning": "The other check passed."}]},
-        {"outcome": "release_to_worker", "reasoning": "The criterion failed.", "criteria": [{"criterion": CRITERION, "result": "fail", "reasoning": "The evidence shows failure."}]},
-        {"outcome": "refund_client", "reasoning": "The criterion passed.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": "The evidence shows success."}]},
-        {"outcome": "refund_client", "reasoning": "The criterion is unclear.", "criteria": [{"criterion": CRITERION, "result": "unverifiable", "reasoning": "The source is inconclusive."}]},
-        {"outcome": "release_to_worker", "reasoning": "The criterion passed.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": ""}]},
-        {"outcome": "pay_someone", "reasoning": "Unsupported outcome.", "criteria": [{"criterion": CRITERION, "result": "pass", "reasoning": "The evidence is available."}]},
-    ],
-)
-def test_malformed_or_conflicting_genlayer_reports_never_settle(escrow, evaluation):
+@pytest.mark.parametrize("evaluation", [[], ["maybe"], ["unverifiable"], {"result": "pass"}])
+def test_malformed_or_unverifiable_genlayer_reports_never_settle(escrow, evaluation):
     vm, job = escrow
     fund(vm, job)
     claim_and_deliver(vm, job)

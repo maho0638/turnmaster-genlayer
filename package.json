@@ -17,7 +17,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "test:network": "node --test tests/genlayer-network.test.mjs tests/wallet-provider.test.mjs tests/contract-source.test.mjs",
     "db:generate": "drizzle-kit generate",
-    "test:live-rpc": "node tests/live-rpc-smoke.mjs"
+    "test:live-rpc": "node tests/live-rpc-smoke.mjs",
+    "test:deploy-preflight": "node tests/live-deploy-preflight.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -56,9 +56,9 @@ function writeClient(address: string, provider: Eip1193Provider) {
   return createClient({
     chain: testnetBradbury,
     account: address as Address,
-    // Stable genlayer-js 1.x uses the exact eth_estimateGas result for the
-    // outer ConsensusMain transaction. Bradbury has public reproductions where
-    // that exact limit reverts before GenVM; upstream's unreleased fix adds 2x.
+    // Bradbury has public reproductions where the exact eth_estimateGas value
+    // can be too tight, while the network currently enforces a 2^24 per-tx gas
+    // ceiling. The provider adds bounded headroom without crossing that ceiling.
     provider: createGenLayerWalletProvider(provider) as never,
   });
 }
@@ -94,14 +94,8 @@ function parseReturnedJson<T>(value: unknown, label: string): T {
 
 export async function readOnchainJob(address: Address): Promise<OnchainJob> {
   const client = readClient();
-  const [jobRaw, deliveryRaw, balanceRaw] = await Promise.all([
-    client.readContract({ address, functionName: "get_job", args: [] }),
-    client.readContract({ address, functionName: "get_delivery", args: [] }),
-    client.readContract({ address, functionName: "escrow_balance", args: [] }),
-  ]);
-  const job = parseReturnedJson<Omit<OnchainJob, "delivery" | "escrow_wei">>(jobRaw, "Job record");
-  const delivery = parseReturnedJson<NonNullable<OnchainJob["delivery"]>>(deliveryRaw, "Delivery record");
-  return { ...job, delivery, escrow_wei: String(balanceRaw) };
+  const jobRaw = await client.readContract({ address, functionName: "get_job", args: [] });
+  return parseReturnedJson<OnchainJob>(jobRaw, "Job record");
 }
 
 async function waitForFinalized(
@@ -227,7 +221,7 @@ export function transactionError(error: unknown): string {
   if (candidate?.name === "SubmittedTransactionError") return "MetaMask returned a transaction ID, but Bradbury has not confirmed the result yet. Check the Explorer link below before trying again.";
   if (candidate?.code === 4001) return "The wallet request was rejected. No contract state was changed.";
   if (candidate?.code === -32603 || candidate?.message?.toLowerCase().includes("fetch")) {
-    return "The Bradbury request failed. MetaMask must use https://rpc-bradbury.genlayer.com as the default RPC for GenLayer Bradbury (chain 4221). TurnMaster also adds the upstream 2x gas headroom for ConsensusMain transactions. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";
+    return "The Bradbury request failed. MetaMask must use https://rpc-bradbury.genlayer.com as the default RPC for GenLayer Bradbury (chain 4221). TurnMaster keeps ConsensusMain gas below Bradbury’s current transaction cap. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";
   }
   return candidate?.shortMessage || candidate?.message || "The transaction did not complete. Contract state was not assumed to have changed.";
 }
