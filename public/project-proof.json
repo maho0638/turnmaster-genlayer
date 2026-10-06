@@ -13,9 +13,46 @@
   "contract": {
     "source": "contracts/TurnMasterEscrow.py",
     "model": "one escrow contract per job",
-    "consensusPrimitives": ["gl.nondet.web.get", "gl.eq_principle.prompt_comparative"]
+    "consensusPrimitives": [
+      "gl.nondet.web.get",
+      "gl.eq_principle.prompt_comparative"
+    ]
   },
-  "lifecycle": ["create", "deploy", "fund", "claim", "deliver", "revise-or-dispute", "consensus-review", "release-refund-or-undetermined"],
-  "automatedEvidence": ["eslint", "typescript", "network-tests", "contract-source-identity", "live-rpc-smoke", "no-broadcast-deploy-preflight", "production-build-smoke", "direct-mode-contract-tests"],
-  "limitations": ["testnet-only", "no-real-funds", "no-legal-arbitration", "final-signed-compact-contract-lifecycle-still-required"]
+  "lifecycle": [
+    "create",
+    "deploy",
+    "fund",
+    "claim",
+    "deliver",
+    "revise-or-dispute",
+    "consensus-review",
+    "release-refund-or-undetermined"
+  ],
+  "automatedEvidence": [
+    "eslint",
+    "typescript",
+    "network-tests",
+    "contract-source-identity",
+    "live-rpc-smoke",
+    "no-broadcast-deploy-preflight",
+    "production-build-smoke",
+    "direct-mode-contract-tests",
+    "genvm-contract-lint",
+    "share-link-and-proof-receipt-tests",
+    "reviewer-route-smoke"
+  ],
+  "limitations": [
+    "testnet-only",
+    "no-real-funds",
+    "no-legal-arbitration",
+    "finalized-deploy-proven-full-signed-lifecycle-still-required"
+  ],
+  "verifiedDeployment": {
+    "status": "FINALIZED",
+    "address": "0xAA85A41F899ED569d32B4CF0FDA2C55461d94482",
+    "transaction": "0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403",
+    "contractExplorer": "https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482",
+    "transactionExplorer": "https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403",
+    "shareableApp": "https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482"
+  }
 }

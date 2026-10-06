@@ -99,3 +99,15 @@ The reviewer materials are intentionally evidence-first: they distinguish verifi
 - A dispute that becomes `undetermined` has no retry or appeal flow. Funds remain in escrow; a recovery procedure is not implemented.
 - Non-zero release commission is unavailable until a valid fee recipient is configured in the deployment environment. Zero-fee jobs are allowed.
 - Browser-based desktop/mobile, keyboard, assistive-technology, and WebMCP runtime checks have not been completed; see the QA report.
+
+
+## Pro verification features
+
+TurnMaster supports shareable contract URLs in the form `/?contract=0x…`. Opening one stores that public contract address in the browser registry, re-reads the latest Bradbury state, and surfaces it in the normal work board without requiring a wallet connection. The live contract panel can copy the address, generate the share link, copy a machine-readable `turnmaster-proof-v1` audit receipt from public state, and open the Explorer.
+
+A real compact-contract deployment is finalized on Bradbury:
+- Contract: https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+- Deployment transaction: https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403
+- Shareable app view: https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+
+CI additionally runs GenVM contract lint, direct contract tests, live RPC/preflight checks, reviewer/project-proof route smoke tests, and the frontend production build.

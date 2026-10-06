@@ -41,5 +41,5 @@ TurnMaster is testnet software. It is not legal arbitration and must not be used
 
 - Public web evidence can change after submission; TurnMaster currently records URLs, not immutable content archives.
 - An `undetermined` terminal dispute has no appeal/retry recovery flow in V1.
-- One complete signed Bradbury lifecycle still needs to be demonstrated on the compact-contract release.
+- A signed compact-contract Bradbury deployment is finalized; the remaining live gap is exercising the full multi-wallet fund → claim → deliver → review → settle lifecycle on that build.
 - Testnet validator/model behavior is external infrastructure and can change independently of the app.

@@ -37,6 +37,13 @@ The Intelligent Contract retrieves submitted public evidence with `gl.nondet.web
 - Security model: `docs/SECURITY_MODEL.md`
 - CI: https://github.com/maho0638/turnmaster-genlayer/actions
 
+## Verified live deployment
+
+- Contract: https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+- Deployment transaction: https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403
+- Shareable app view: https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+- Consensus state observed after the finalization window: FINALIZED.
+
 ## Honest current limit
 
-The compact deployment path passes a live Bradbury no-broadcast preflight, but one successful user-signed deployment followed by the complete create → fund → deliver → review → settle journey is still required to close the final end-to-end gap. The project does not claim that gap is already closed.
+The compact contract has a successful user-signed finalized Bradbury deployment. The remaining end-to-end gap is the complete multi-wallet lifecycle on this build: fund → claim → deliver → dispute/accept → settle. The project does not claim that later lifecycle has already been completed live.

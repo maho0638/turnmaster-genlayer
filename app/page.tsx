@@ -144,7 +144,12 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const addresses = loadContractAddresses(window.localStorage);
+    const shared = new URLSearchParams(window.location.search).get("contract")?.trim() ?? "";
+    const remembered = loadContractAddresses(window.localStorage);
+    const addresses = isEvmAddress(shared)
+      ? [shared, ...remembered.filter((address) => address.toLowerCase() !== shared.toLowerCase())]
+      : remembered;
+    if (isEvmAddress(shared)) rememberContractAddress(shared, window.localStorage);
     if (addresses.length === 0) return;
     let cancelled = false;
     void import("@/lib/turnmaster-chain")
@@ -162,7 +167,9 @@ export default function Home() {
           const liveAddresses = new Set(live.map((job) => job.contractAddress!.toLowerCase()));
           return [...live, ...current.filter((job) => !job.contractAddress || !liveAddresses.has(job.contractAddress.toLowerCase()))];
         });
-        setSelected((current) => current.sample ? live[0] : current);
+        const sharedJob = isEvmAddress(shared) ? live.find((job) => job.contractAddress?.toLowerCase() === shared.toLowerCase()) : undefined;
+        setSelected((current) => sharedJob ?? (current.sample ? live[0] : current));
+        if (sharedJob) setNotice("Shared Bradbury contract loaded and verified from public chain state.");
       })
       .catch(() => undefined);
     return () => { cancelled = true; };

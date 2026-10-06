@@ -14,7 +14,10 @@ test("project proof manifest exposes the public reviewer surface", () => {
   assert.ok(proof.contract.consensusPrimitives.includes("gl.nondet.web.get"));
   assert.ok(proof.contract.consensusPrimitives.includes("gl.eq_principle.prompt_comparative"));
   assert.ok(proof.lifecycle.length >= 8);
-  assert.ok(proof.automatedEvidence.length >= 8);
+  assert.ok(proof.automatedEvidence.length >= 11);
+  assert.equal(proof.verifiedDeployment.status, "FINALIZED");
+  assert.equal(proof.verifiedDeployment.address, "0xAA85A41F899ED569d32B4CF0FDA2C55461d94482");
+  assert.equal(proof.verifiedDeployment.transaction, "0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403");
 });
 
 test("reviewer page covers GenLayer differentiation and the full lifecycle", () => {
@@ -46,4 +49,11 @@ test("transient information notices auto-dismiss", () => {
   const page = read("app/page.tsx");
   assert.ok(page.includes('window.setTimeout(() => setNotice(""), 5_000)'));
   assert.ok(page.includes("window.clearTimeout(timer)"));
+});
+
+test("reviewer proof links the finalized Bradbury deployment", () => {
+  const page = read("app/reviewer/page.tsx");
+  assert.ok(page.includes("0xAA85A41F899ED569d32B4CF0FDA2C55461d94482"));
+  assert.ok(page.includes("0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403"));
+  assert.ok(page.includes("FINALIZED DEPLOYMENT"));
 });

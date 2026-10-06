@@ -20,7 +20,8 @@
     "test:live-rpc": "node tests/live-rpc-smoke.mjs",
     "test:deploy-preflight": "node tests/live-deploy-preflight.mjs",
     "test:project-proof": "node --test tests/project-proof.test.mjs",
-    "test:registry": "node --test tests/job-registry.test.mjs"
+    "test:registry": "node --test tests/job-registry.test.mjs",
+    "test:contract-proof": "node --test tests/contract-proof.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

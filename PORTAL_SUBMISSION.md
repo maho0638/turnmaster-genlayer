@@ -43,9 +43,16 @@ https://github.com/maho0638/turnmaster-genlayer
 
 A reviewer should see a Bradbury Intelligent Contract whose immutable job terms can be re-read by address and whose UI actions are enabled only for the correct role/state. Funding must equal the frozen reward, a non-client wallet can claim, the assigned worker can submit public evidence, and a disputed review must store one verdict per frozen criterion. An all-pass dispute releases to the worker; a verified fail refunds the client; any unverifiable criterion results in `undetermined` with no payout. Every successful write must finalize before the UI reloads state, and known transaction hashes must link to Bradbury Explorer.
 
-## Optional contract links
+## Contract links
 
-Add the final successful Bradbury TurnMasterEscrow Explorer address here after the first signed compact-contract deployment. Do not invent or reuse an unrelated address.
+Finalized TurnMasterEscrow:
+https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+
+Finalized deployment transaction:
+https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403
+
+Shareable TurnMaster contract view:
+https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
 
 ## Evidence and supporting information
 

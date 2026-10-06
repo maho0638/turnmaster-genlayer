@@ -47,8 +47,20 @@ The public site now contains a dedicated `/reviewer` route designed for a stewar
 
 `PORTAL_SUBMISSION.md` mirrors the Portal fields visible in the current Project submission form: project name, one-sentence summary, detailed description, demo URL, GitHub URL, exact review steps, expected verification result, optional contract-link guidance, and supporting evidence. The evidence test fails if these required sections or the core GenLayer consensus primitives disappear.
 
-This improves reviewability but does not guarantee a 4,000-point award; scoring remains a steward decision. The repository continues to state the remaining signed end-to-end Bradbury gap explicitly.
+This improves reviewability but does not guarantee a 4,000-point award; scoring remains a steward decision. A real TurnMasterEscrow deployment is finalized on Bradbury at `0xAA85A41F899ED569d32B4CF0FDA2C55461d94482` with deployment transaction `0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403`. The remaining live gap is the later multi-wallet lifecycle, not deployment.
 
 ## Release status
 
 The project is a testnet-only application with a GenLayer contract and SDK-backed Bradbury actions. GitHub verification now covers frontend lint/type/build, network unit tests, live public-RPC checks, a no-broadcast live deployment preflight, a built-site HTTP smoke check, and direct-mode contract tests before changes are promoted to `main`. No TurnMaster job contract has yet completed the full live create → fund → deliver → settle journey. It is not ready for real funds and does not provide legal arbitration.
+
+
+## Pro upgrade verification
+
+The upgrade branch adds portable contract deep links (`?contract=0x…`), a public-state audit receipt, role/status/evidence verification controls, a finalized deployment proof block for reviewers, official GenVM contract linting in CI, and stronger production-route smoke checks.
+
+Finalized deployment proof:
+- Contract: https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+- Transaction: https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403
+- Shareable app view: https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+
+Production deployment remains intentionally blocked until the upgrade branch CI is fully green.

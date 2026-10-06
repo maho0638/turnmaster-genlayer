@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, LoaderCircle, ShieldCheck, Wallet } from "lucide-react";
+import { Check, Copy, ExternalLink, FileCheck2, LoaderCircle, Share2, ShieldCheck, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -17,6 +17,7 @@ import {
   type TxResult,
 } from "@/lib/turnmaster-chain";
 import type { Address } from "viem";
+import { buildContractProofReceipt, buildContractShareUrl } from "@/lib/contract-proof.mjs";
 
 type Action = "fund" | "claim" | "deliver" | "accept" | "revision" | "dispute" | "evidence" | "resolve" | "refund" | "cancel";
 type Props = {
@@ -68,11 +69,18 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
   const [refreshError, setRefreshError] = useState("");
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const [pendingHash, setPendingHash] = useState("");
+  const [copied, setCopied] = useState("");
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 5_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(""), 2_000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
 
   const pendingStorageKey = useMemo(
     () => `turnmaster-pending-action:${contractAddress.toLowerCase()}`,
@@ -95,6 +103,23 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
   const deadlinePassed = now > job.deadline;
   const decision = useMemo(() => decodeDecision(job.decision), [job.decision]);
   const actionValue = action === "fund" ? formatWeiGen(job.reward_wei) : "0";
+  const role = isClient ? "Client" : isWorker ? "Worker" : walletAddress ? "Observer" : "Not connected";
+  const evidenceCount = job.delivery?.evidence_urls?.length ?? 0;
+  const copyValue = async (value: string, label: string) => {
+    if (!navigator.clipboard?.writeText) {
+      setRefreshError("Clipboard access is unavailable in this browser.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(label);
+      setRefreshError("");
+    } catch {
+      setRefreshError("The browser blocked clipboard access.");
+    }
+  };
+  const copyShareLink = () => copyValue(buildContractShareUrl(window.location.origin, contractAddress), "share");
+  const copyReceipt = () => copyValue(JSON.stringify(buildContractProofReceipt(contractAddress, job), null, 2), "receipt");
 
   const availableActions: Action[] = [];
   if (job.status === "open" && isClient && !job.funded) availableActions.push("fund", "cancel");
@@ -219,8 +244,20 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
   return <div className="chain-workflow">
     <div className="chain-workflow-head"><span><ShieldCheck size={15} />LIVE CONTRACT</span><button onClick={refresh} disabled={busy} aria-label="Refresh contract state">{busy ? <LoaderCircle size={14} className="spin" /> : "Refresh"}</button></div>
     <a className="contract-address-link" href={explorerAddressUrl(contractAddress)} target="_blank" rel="noreferrer">{contractAddress}<ExternalLink size={12} /></a>
-    <div className="chain-state-row"><span>Contract state</span><b>{job.status.replaceAll("_", " ")}</b></div>
+    <div className="chain-proof-grid" aria-label="On-chain verification summary">
+      <div><span>Status</span><b>{job.status.replaceAll("_", " ")}</b></div>
+      <div><span>Your role</span><b>{role}</b></div>
+      <div><span>Criteria</span><b>{job.acceptance_criteria.length}</b></div>
+      <div><span>Evidence</span><b>{evidenceCount}</b></div>
+    </div>
+    <div className="chain-proof-actions">
+      <button type="button" onClick={() => copyValue(contractAddress, "address")}>{copied === "address" ? <Check size={13}/> : <Copy size={13}/>}Copy address</button>
+      <button type="button" onClick={copyShareLink}>{copied === "share" ? <Check size={13}/> : <Share2 size={13}/>}Share contract</button>
+      <button type="button" onClick={copyReceipt}>{copied === "receipt" ? <Check size={13}/> : <FileCheck2 size={13}/>}Copy audit receipt</button>
+      <a href={explorerAddressUrl(contractAddress)} target="_blank" rel="noreferrer">Explorer <ExternalLink size={12}/></a>
+    </div>
     <div className="chain-state-row"><span>Escrow balance</span><b>{formatWeiGen(job.escrow_wei ?? "0")} GEN</b></div>
+    <div className="chain-state-row"><span>Deadline</span><b>{new Date(job.deadline * 1000).toLocaleDateString()}</b></div>
     {job.status === "claimed" && <div className="chain-state-row"><span>Worker</span><b className="mono">{job.worker}</b></div>}
 
     {pendingHash ? <div className="chain-tx chain-error" role="alert"><span>Previous transaction status is still unverified — do not submit another action yet.</span><a href={explorerTransactionUrl(pendingHash)} target="_blank" rel="noreferrer">Check transaction in Bradbury Explorer <ExternalLink size={12} /></a><button type="button" onClick={() => { setPendingHash(""); window.sessionStorage.removeItem(pendingStorageKey); setError(""); }}>Explorer confirms failure — allow retry</button></div> : availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{rpcError ? "TurnMaster cannot verify Bradbury RPC state. Use Check network in the top bar; contract actions are paused." : !walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
