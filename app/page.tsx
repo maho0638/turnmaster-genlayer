@@ -225,7 +225,10 @@ export default function Home() {
     } catch (error) {
       const code = (error as { code?: number }).code;
       if (code === 4001) setWalletMessage("Network setup was cancelled. No GEN transaction was sent.");
-      else setWalletMessage("MetaMask could not confirm the Bradbury RPC. In MetaMask network settings, set the RPC URL to https://rpc-bradbury.genlayer.com. No GEN transaction was sent.");
+      else {
+        const reason = error instanceof Error ? error.message : String(error);
+        setWalletMessage(`MetaMask could not update the testnet RPC (${code ?? "unknown error"}: ${reason}). No GEN transaction was sent.`);
+      }
       setWalletBalanceError(true);
     } finally { setNetworkRepairBusy(false); }
   };
