@@ -2,7 +2,7 @@
 
 Date: 2026-10-06
 
-## Verified locally
+## Verified locally and on the deployed app
 
 | Check | Result | Evidence / limits |
 | --- | --- | --- |
@@ -10,28 +10,32 @@ Date: 2026-10-06
 | TypeScript | PASS | `npx tsc --noEmit` completed without errors. |
 | Production build | PASS | `npm run build` completed. Contract controls and GenLayer SDK are split from the initial board bundle. Vinext still emits its static route-classification advisory. |
 | GenLayer contract direct-mode suite | PASS | `HOME=/tmp/turnmaster-gltest-home python -m pytest tests/test_contract_direct.py -q` — 19 passed. |
-| Bradbury network config unit test | PASS | `npm run test:network` — checks the wallet GenLayer Chain RPC, separate Bradbury SDK RPC, chain id/name, currency, explorer, GEN formatting and address validation. |
-| Contract source publication check | PASS | `npm run test:network` also verifies the browser-served Python source is byte-identical to `contracts/TurnMasterEscrow.py`; npm syncs it before dev/build. |
-| Vercel project configuration | PREPARED | `vercel.json` selects Next.js, `npm ci`, and `npm run build:vercel`. The repository can be imported from Vercel New Project. |
+| Bradbury network config unit test | PASS | `node --test` on the updated network test plus the contract-source publication test — both file-level suites passed; checks confirm wallet metadata matches the Bradbury SDK RPC and validates chain metadata/formatting/address rules. |
+| Contract source publication check | PASS | The publication test confirms the browser-served Python source is byte-identical to `contracts/TurnMasterEscrow.py`. |
+| Vercel production deployment | PASS | The current production build reached `READY`; production alias `turnmaster-genlayer.vercel.app` is attached and the work board loaded in a browser. No wallet transaction was submitted during verification. |
 | Deterministic contract rules | PASS | Creation validation, empty/vague criteria, zero/negative reward, exact funding, client/worker roles, deadline-late funding and delivery, revision, acceptance, cancellation, and settlement idempotency. |
 | Dispute contract behavior | PASS (local mocks) | Party-only dispute resolution, exact frozen-criteria matching, readable decision explanations, malformed/conflicting outcomes, retrievable and unavailable evidence, no payout on `undetermined`, and no second evaluation after the dispute is terminal. Evidence retrieval and evaluator responses are mocked by the local VM. |
-| SDK/network references | PASS (configuration) | Wallet configuration uses the official GenLayer Chain RPC for standard EVM operations; `genlayer-js` retains the official Bradbury RPC for Intelligent Contract operations. Unit tests verify the URLs and chain metadata. This does not establish live RPC or transaction success. |
+| SDK/network references | PASS (configuration) | Wallet metadata and `genlayer-js` both use the official Bradbury RPC. The focused network test verifies the endpoints and chain metadata. Vercel served the updated production page; this does not establish that a user's MetaMask has updated its saved RPC or that a live transaction finalized. |
 | GenLayer SDK | PASS | Lockfile uses stable `genlayer-js` `1.2.0`; the app uses `testnetBradbury`, finalized receipts, and the SDK's EVM gas estimation before wallet approval. |
 
 The direct-mode tests run against a local VM with public evidence and model responses mocked. They do not establish validator consensus, live RPC behavior, wallet signing, gas/protocol fees, queued transfer finalization, or a real Explorer receipt.
+
+## Screenshot and transaction-flow diagnosis
+
+The supplied screenshots show a MetaMask attempt marked failed with `-0 GEN` and a later submission prompt showing `0 GEN`, while TurnMaster displayed an RPC/balance error. In the installed `genlayer-js` 1.2.0 implementation, `deployContract` sends contract bytecode and constructor arguments to the GenLayer consensus contract and does not set an EVM `value`; the reward amount is stored in the job terms and is funded separately through `fund()`. Therefore MetaMask's 0 GEN is the transaction value, not the entire transaction payload or the later escrow deposit. The screenshots contain no transaction hash, so neither screenshot proves whether the later request finalized. The app was also leaving the deploy button available while its own native-balance RPC read had failed; the UI now pauses deploy/fund actions until MetaMask can read a positive native GEN balance and explains the 0-value deployment.
 
 ## Not verified / remaining blockers
 
 - No TurnMaster contract has been deployed from this build. There is no real contract address, transaction hash, escrow balance, or Explorer activity to display.
 - The full `create → fund → deliver → evaluate → release/refund` Bradbury testnet journey was **NOT RUN**. A compatible connected wallet and funded testnet account were not available in the task environment. The app now has the transaction paths, but they remain unverified against the live network.
 - Disconnected wallet, wrong network, user signature rejection, failed transaction, unavailable RPC, and live unavailable-evidence outcomes have not been exercised in an actual browser/wallet session. SDK gas estimation and the wallet's fee quote were not exercised against Bradbury.
-- Desktop/mobile visual layout, keyboard-only navigation, 200% zoom, assistive technology, overflow, and runtime WebMCP registration have not been browser-tested. Browser interaction is unavailable in this execution environment, so build/type/lint results are not a substitute for this QA.
+- The production board was loaded in a browser, but wallet-connected flows, mobile layout, keyboard-only navigation, 200% zoom, assistive technology, and runtime WebMCP were not fully tested.
 - Build output has no client chunk size advisory after lazy-loading contract controls and GenLayer transaction modules. Vinext still cannot statically classify the root route and prints its generic route-classification advisory.
-- Vercel's Next.js build was **NOT VERIFIED locally**. This execution environment blocks the child process/port operation Next/Turbopack requests; `npm run build:vercel` therefore exits before completing. The normal Vinext/Sites build passes. The first Vercel deployment build must confirm the Next.js target in Vercel's build logs.
+- The Git-connected Vercel production build completed successfully. This verifies the deployed Next.js build, not every wallet flow.
 - The board has no indexer or shared persistence. User-created contract addresses must be saved by the user and re-imported after refresh; session drafts are intentionally ephemeral.
 - A dispute with inaccessible or unverifiable evidence ends as `undetermined` with funds still held. There is no retry/appeal or recovery action for that terminal state.
 - A non-zero fee requires `NEXT_PUBLIC_TURNMASTER_FEE_RECIPIENT`; no recipient is configured in this build. Zero-fee Bradbury jobs can be created.
 
 ## Release status
 
-The project is a buildable, locally tested testnet application with a GenLayer contract and SDK-backed Bradbury actions. The live testnet flow and browser/accessibility checks remain incomplete, and no contract deployment or public site deployment has been made. It is not ready for real funds and does not provide legal arbitration. The current Site remains an owner-private saved draft.
+The project is a deployed, testnet-only application with a GenLayer contract and SDK-backed Bradbury actions. The public site is live, but no TurnMaster job contract has been deployed and the full live testnet flow remains unverified. It is not ready for real funds and does not provide legal arbitration.

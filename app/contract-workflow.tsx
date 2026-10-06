@@ -23,6 +23,7 @@ type Props = {
   contractAddress: string;
   walletAddress: string;
   provider: Eip1193Provider | null;
+  rpcError?: boolean;
   job: OnchainJob;
   lastTx?: TxResult;
   onUpdated: (job: OnchainJob, tx?: TxResult) => void;
@@ -55,7 +56,7 @@ function decodeDecision(value: string): Record<string, unknown> | null {
   }
 }
 
-export function ContractWorkflow({ contractAddress, walletAddress, provider, job, lastTx, onUpdated }: Props) {
+export function ContractWorkflow({ contractAddress, walletAddress, provider, rpcError = false, job, lastTx, onUpdated }: Props) {
   const [action, setAction] = useState<Action | null>(null);
   const [description, setDescription] = useState("");
   const [evidenceText, setEvidenceText] = useState("");
@@ -198,7 +199,7 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, job
     <div className="chain-state-row"><span>Escrow balance</span><b>{formatWeiGen(job.escrow_wei ?? "0")} GEN</b></div>
     {job.status === "claimed" && <div className="chain-state-row"><span>Worker</span><b className="mono">{job.worker}</b></div>}
 
-    {availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{!walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
+    {availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{rpcError ? "MetaMask cannot reach the Bradbury RPC. Use Fix RPC in the top bar; contract actions are paused." : !walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
 
     {processingText && <p className="chain-processing" role="status"><LoaderCircle size={14} className="spin" />{processingText}</p>}
     {refreshError && <p className="chain-error" role="alert">{refreshError}</p>}
