@@ -13,19 +13,18 @@ import {
   readBradburyNativeBalanceWei,
 } from "../lib/genlayer-network.mjs";
 
-test("wallet eth_* signing and GenLayer contract RPCs stay on the intended Bradbury endpoints", () => {
+test("MetaMask and the SDK use the official Bradbury GenLayer RPC", () => {
   assert.equal(testnetBradbury.id, BRADBURY_CHAIN_ID);
   assert.equal(Number.parseInt(BRADBURY_WALLET_NETWORK.chainId, 16), testnetBradbury.id);
   assert.equal(BRADBURY_WALLET_NETWORK.chainName, testnetBradbury.name);
-
-  assert.deepEqual(BRADBURY_WALLET_NETWORK.rpcUrls, [BRADBURY_CHAIN_RPC_URL]);
-  assert.deepEqual(testnetBradbury.rpcUrls.default.http, [BRADBURY_GENLAYER_RPC_URL]);
-  assert.notEqual(BRADBURY_CHAIN_RPC_URL, BRADBURY_GENLAYER_RPC_URL);
-
+  assert.deepEqual(BRADBURY_WALLET_NETWORK.rpcUrls, [BRADBURY_GENLAYER_RPC_URL]);
+  assert.deepEqual(BRADBURY_WALLET_NETWORK.rpcUrls, testnetBradbury.rpcUrls.default.http);
   assert.equal(BRADBURY_WALLET_NETWORK.nativeCurrency.symbol, testnetBradbury.nativeCurrency.symbol);
   assert.equal(BRADBURY_WALLET_NETWORK.nativeCurrency.decimals, testnetBradbury.nativeCurrency.decimals);
-  assert.equal(BRADBURY_WALLET_NETWORK.blockExplorerUrls[0], BRADBURY_CHAIN_EXPLORER_URL);
+  assert.equal(BRADBURY_WALLET_NETWORK.blockExplorerUrls[0], BRADBURY_GENLAYER_EXPLORER_URL);
   assert.equal(testnetBradbury.blockExplorers.default.url.replace(/\/$/, ""), BRADBURY_GENLAYER_EXPLORER_URL);
+  assert.notEqual(BRADBURY_CHAIN_RPC_URL, BRADBURY_GENLAYER_RPC_URL);
+  assert.notEqual(BRADBURY_CHAIN_EXPLORER_URL, BRADBURY_GENLAYER_EXPLORER_URL);
 });
 
 test("Bradbury balance verification bypasses the injected wallet provider", async () => {

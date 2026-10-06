@@ -2,6 +2,7 @@ import { createClient } from "genlayer-js";
 import { testnetBradbury } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus, type CalldataEncodable, type DecodedDeployData, type TransactionHash } from "genlayer-js/types";
 import { isAddress, parseEther, type Address } from "viem";
+import { createGenLayerWalletProvider } from "@/lib/genlayer-wallet-provider.mjs";
 
 export type Eip1193Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -55,7 +56,10 @@ function writeClient(address: string, provider: Eip1193Provider) {
   return createClient({
     chain: testnetBradbury,
     account: address as Address,
-    provider: provider as never,
+    // Stable genlayer-js 1.x uses the exact eth_estimateGas result for the
+    // outer ConsensusMain transaction. Bradbury has public reproductions where
+    // that exact limit reverts before GenVM; upstream's unreleased fix adds 2x.
+    provider: createGenLayerWalletProvider(provider) as never,
   });
 }
 
@@ -223,7 +227,7 @@ export function transactionError(error: unknown): string {
   if (candidate?.name === "SubmittedTransactionError") return "MetaMask returned a transaction ID, but Bradbury has not confirmed the result yet. Check the Explorer link below before trying again.";
   if (candidate?.code === 4001) return "The wallet request was rejected. No contract state was changed.";
   if (candidate?.code === -32603 || candidate?.message?.toLowerCase().includes("fetch")) {
-    return "The Bradbury request failed. TurnMaster uses https://rpc.testnet-chain.genlayer.com for MetaMask eth_* signing and https://rpc-bradbury.genlayer.com for Intelligent Contract RPC calls on chain 4221. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";
+    return "The Bradbury request failed. MetaMask must use https://rpc-bradbury.genlayer.com as the default RPC for GenLayer Bradbury (chain 4221). TurnMaster also adds the upstream 2x gas headroom for ConsensusMain transactions. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";
   }
   return candidate?.shortMessage || candidate?.message || "The transaction did not complete. Contract state was not assumed to have changed.";
 }

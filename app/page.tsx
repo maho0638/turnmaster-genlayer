@@ -39,6 +39,29 @@ async function readBradburyNativeBalance(address: string) {
   return formatWeiGen(balance.toString());
 }
 
+async function ensureOfficialBradburyNetwork(provider: Eip1193Provider) {
+  let alreadyPresent = false;
+  try {
+    await provider.request({ method: "wallet_addEthereumChain", params: [network] });
+  } catch (error) {
+    const candidate = error as { code?: number; message?: string };
+    if (candidate.code === 4001) throw error;
+    const message = candidate.message?.toLowerCase() ?? "";
+    if (candidate.code === -32602 || message.includes("already") || message.includes("exist")) {
+      alreadyPresent = true;
+    } else {
+      throw error;
+    }
+  }
+
+  await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.chainId }] });
+  const chainHex = await provider.request({ method: "eth_chainId" }) as string;
+  if (Number.parseInt(chainHex, 16) !== networkChainId) {
+    throw new Error("MetaMask did not switch to GenLayer Bradbury chain 4221.");
+  }
+  return { alreadyPresent };
+}
+
 function statusFromChain(status: string): Status {
   const labels: Record<string, Status> = { open: "Open", funded: "Funded", claimed: "Claimed", delivered: "Delivered", revision_requested: "Revision requested", disputed: "In review", undetermined: "Undetermined", resolved: "Resolved", cancelled: "Cancelled" };
   return labels[status] ?? "Undetermined";
@@ -207,53 +230,36 @@ export default function Home() {
     try {
       const accounts = await provider.request({ method: "eth_requestAccounts" }) as string[];
       if (!accounts?.[0]) { setWalletMessage("Wallet returned no account."); return; }
-      const chainHex = await provider.request({ method: "eth_chainId" }) as string;
-      if (Number.parseInt(chainHex, 16) !== networkChainId) {
-        setWrongNetwork(true);
-        try { await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.chainId }] }); setWrongNetwork(false); }
-        catch (switchError) {
-          if ((switchError as { code?: number }).code === 4902) {
-            await provider.request({ method: "wallet_addEthereumChain", params: [network] });
-            await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.chainId }] });
-          } else {
-            throw switchError;
-          }
-          const verify = await provider.request({ method: "eth_chainId" }) as string;
-          if (Number.parseInt(verify, 16) !== networkChainId) { setWalletAddress(accounts[0]); setWalletMessage("Connected, but still on the wrong network. TurnMaster actions remain disabled."); return; }
-          setWrongNetwork(false);
-        }
-      }
+      const networkResult = await ensureOfficialBradburyNetwork(provider);
+      setWrongNetwork(false);
       const [{ createClient }, { testnetBradbury }] = await Promise.all([import("genlayer-js"), import("genlayer-js/chains")]);
       const genlayerClient = createClient({ chain: testnetBradbury, account: accounts[0] as `0x${string}`, provider: provider as never });
       await genlayerClient.connect("testnetBradbury");
-      setWalletAddress(accounts[0]); setWalletMessage("Wallet connected to GenLayer Bradbury Testnet.");
+      setWalletAddress(accounts[0]);
+      setWalletMessage(networkResult.alreadyPresent
+        ? "Wallet connected to Bradbury chain 4221. If this network was saved by an older TurnMaster build, set https://rpc-bradbury.genlayer.com as MetaMask's Default RPC URL before signing."
+        : "Wallet connected with the official GenLayer Bradbury RPC.");
     } catch (error) { const { transactionError } = await import("@/lib/turnmaster-chain"); setWalletMessage(transactionError(error)); }
   };
   const repairBradburyNetwork = async () => {
     if (!walletProvider || !walletAddress) return;
     setNetworkRepairBusy(true);
-    setWalletMessage("Check the Bradbury chain-4221 wallet settings in MetaMask. This does not send GEN.");
-    let networkConfigured = false;
+    setWalletMessage("Requesting the official Bradbury RPC in MetaMask. This does not send GEN.");
     try {
-      await walletProvider.request({ method: "wallet_addEthereumChain", params: [network] });
-      await walletProvider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: network.chainId }] });
-      const chainHex = await walletProvider.request({ method: "eth_chainId" }) as string;
-      if (Number.parseInt(chainHex, 16) !== networkChainId) throw new Error("MetaMask did not switch to chain 4221.");
-      networkConfigured = true;
+      const networkResult = await ensureOfficialBradburyNetwork(walletProvider);
       setWrongNetwork(false);
       const balance = await readBradburyNativeBalance(walletAddress);
       setWalletBalance(balance);
       setWalletBalanceError(false);
-      setWalletMessage(Number(balance) > 0 ? "Bradbury Testnet selected. Native GEN balance verified from the public GenLayer RPC." : "Bradbury Testnet selected, but this wallet has 0 native GEN. No transaction was sent.");
+      setWalletMessage(networkResult.alreadyPresent
+        ? `Bradbury chain 4221 already exists in MetaMask. Make ${network.rpcUrls[0]} the Default RPC URL, then retry. Native GEN balance: ${balance}.`
+        : `Official Bradbury RPC selected. Native GEN balance verified: ${balance} GEN.`);
     } catch (error) {
       const code = (error as { code?: number }).code;
       if (code === 4001) setWalletMessage("Network setup was cancelled. No GEN transaction was sent.");
       else {
         const reason = error instanceof Error ? error.message : String(error);
-        const guidance = networkConfigured
-          ? `Bradbury RPC balance read failed (${reason}). The network is selected, but TurnMaster cannot verify funds. No transaction was sent.`
-          : `MetaMask could not select Bradbury Testnet (${reason}). Edit its RPC URL to ${network.rpcUrls[0]} and retry. No transaction was sent.`;
-        setWalletMessage(guidance);
+        setWalletMessage(`MetaMask could not configure the official Bradbury RPC (${reason}). Set the Default RPC URL to ${network.rpcUrls[0]} and retry. No transaction was sent.`);
       }
       setWalletBalanceError(true);
     } finally { setNetworkRepairBusy(false); }
@@ -274,7 +280,7 @@ export default function Home() {
     const usable = criteria.map((item) => item.trim());
     if (!walletAddress || !walletProvider) { setFormError("Connect a wallet before deploying a job contract."); return; }
     if (wrongNetwork) { setFormError("Switch to GenLayer Bradbury Testnet before deploying."); return; }
-    if (walletBalanceError || walletBalance === null) { setFormError("TurnMaster cannot verify the Bradbury GEN balance yet. Click Check network, wait for the balance to refresh, then try again. No transaction was sent."); return; }
+    if (walletBalanceError || walletBalance === null) { setFormError("TurnMaster cannot verify the Bradbury GEN balance yet. Click Fix Bradbury RPC, wait for the balance to refresh, then try again. No transaction was sent."); return; }
     if (Number(walletBalance) <= 0) { setFormError("This wallet has 0 native GEN for testnet fees. GEN shown as a separate token may not pay gas. Get native Bradbury GEN before deploying. No transaction was sent."); return; }
     if (!form.title.trim() || form.title.trim().length < 4 || form.description.trim().length < 20 || form.delivery.trim().length < 8 || !form.due || !form.reward) { setFormError("Add a title, a 20-character description, a delivery definition, deadline, and reward."); return; }
     if (usable.length === 0 || usable.length > 12 || usable.some((item) => item.length < 18)) { setFormError("Provide 1–12 acceptance criteria, each at least 18 characters."); return; }
@@ -367,7 +373,7 @@ export default function Home() {
     </aside>
 
     <section className="main-area">
-      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork || walletBalanceError ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : walletBalanceError ? "RPC issue" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress && walletBalanceError && <button className="network-repair" onClick={repairBradburyNetwork} disabled={networkRepairBusy}>{networkRepairBusy ? "Checking…" : "Check network"}</button>}{walletAddress ? <button className="wallet-connected" title={walletAddress} onClick={() => {
+      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork || walletBalanceError ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : walletBalanceError ? "RPC issue" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress && <button className="network-repair" onClick={repairBradburyNetwork} disabled={networkRepairBusy}>{networkRepairBusy ? "Updating…" : "Fix Bradbury RPC"}</button>}{walletAddress ? <button className="wallet-connected" title={walletAddress} onClick={() => {
       setWalletBalance(null);
       setWalletBalanceError(false);
       void readBradburyNativeBalance(walletAddress).then(setWalletBalance).catch((error) => {
@@ -388,7 +394,7 @@ export default function Home() {
       </div>
     </section>
 
-    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="create-dialog"><DialogHeader><div className="dialog-eyebrow">NEW WORK ITEM <span>01 / 01</span></div><DialogTitle>Create a job</DialogTitle><DialogDescription>Write the terms clearly. Deploy them as a Bradbury contract or add a page-session draft.</DialogDescription></DialogHeader><form onSubmit={createDraft} className="job-form"><div className="preview-inline"><CircleAlert size={15}/><span>Add a browser-only draft, or deploy these frozen terms to Bradbury. An on-chain job starts unfunded; you deposit the reward in a separate confirmed transaction.</span></div><label>Job title<input autoFocus maxLength={90} value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. Review the v2 governance proposal" required/></label><label>What needs to be done?<textarea rows={3} maxLength={1200} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Describe the work and its boundaries." required/></label><label>What will be delivered?<textarea rows={2} maxLength={700} value={form.delivery} onChange={e=>setForm({...form,delivery:e.target.value})} placeholder="Name the files, links, format, or outcome." required/></label><fieldset className="criteria-field"><legend>Acceptance criteria <small>Measurable checks</small></legend>{criteria.map((value,i)=><div className="criterion-input" key={i}><span>{String(i+1).padStart(2,"0")}</span><input aria-label={`Acceptance criterion ${i+1}`} maxLength={260} value={value} onChange={e=>setCriteria(criteria.map((v,j)=>j===i?e.target.value:v))} placeholder="A reviewer can verify that…"/><button type="button" onClick={()=>setCriteria(criteria.filter((_,j)=>i!==j))} aria-label={`Remove criterion ${i+1}`} disabled={criteria.length===1}><X size={15}/></button></div>)}<button type="button" className="add-criterion" onClick={()=>setCriteria([...criteria,""])}><Plus size={14}/>Add criterion</button><small className="field-hint">Be specific. Use a result that can be checked from the submitted evidence.</small></fieldset><div className="form-row"><label>Evidence type<select value={form.proofType} onChange={e=>setForm({...form,proofType:e.target.value})}><option>Public URL</option><option>Repository link</option><option>Document link</option><option>Text response</option></select></label><label>Deadline<input type="date" min={new Date().toISOString().slice(0,10)} value={form.due} onChange={e=>setForm({...form,due:e.target.value})} required/></label></div><div className="form-row"><label>Reward <span className="input-unit">GEN</span><input type="number" min="0.000001" step="0.01" value={form.reward} onChange={e=>setForm({...form,reward:e.target.value})} placeholder="0.00" required/></label><label>Release fee <span className="input-unit">%</span><input type="number" min="0" max="100" step="0.1" value={form.fee} onChange={e=>setForm({...form,fee:e.target.value})}/></label></div><p className="fee-explain"><Shield size={14}/>Release fee: {Number(form.fee||0)}% on successful release; 0% on refunds. Bradbury Testnet only. {isEvmAddress(feeRecipientConfig) ? "The configured recipient is active for non-zero fees." : "No fee recipient is configured; use 0% until one is set."}</p><div className="chain-create-summary"><b>Bradbury Testnet · Chain 4221</b><span>TurnMaster uses Bradbury for Intelligent Contract RPC calls and the GenLayer Chain RPC for MetaMask signing; both are chain 4221. MetaMask will show 0 GEN as the deployment transaction value. The {form.reward || "0"} GEN reward is deposited later with Fund.</span><span>Bradbury testnet fees are separate. This button stays disabled until the official Bradbury RPC confirms a non-zero native GEN balance.</span></div>{walletBalanceError&&<p className="form-error" role="alert"><CircleAlert size={15}/>TurnMaster could not verify the native GEN balance from the Bradbury RPC. Use Check network to verify the wallet network; transaction buttons stay paused until the balance is verified.</p>}{walletBalance=== "0"&&<p className="form-error" role="alert"><CircleAlert size={15}/>Native GEN balance is 0. A separate GEN token balance cannot pay network fees. Get native testnet GEN first.</p>}{formError&&<p className="form-error" role="alert"><CircleAlert size={15}/>{formError}</p>}{pendingDeployHash&&<div className="chain-tx chain-error" role="alert"><span>Transaction result unknown — do not deploy again yet.</span><a href={`https://explorer-bradbury.genlayer.com/tx/${pendingDeployHash}`} target="_blank" rel="noreferrer">Check this transaction in Bradbury Explorer <ExternalLink size={13}/></a><button type="button" onClick={()=>{setPendingDeployHash("");window.sessionStorage.removeItem("turnmaster-pending-deploy");setFormError("Pending transaction cleared. Only retry if Explorer confirms it failed.");}}>Explorer confirms failure — allow retry</button></div>}<DialogFooter><Button type="button" variant="outline" onClick={()=>setCreateOpen(false)}>Cancel</Button><Button type="submit" className="session-draft-action"><FileText size={15}/>Add session draft</Button><Button type="button" className="primary-action" onClick={createOnchain} disabled={chainBusy||Boolean(pendingDeployHash)||!walletAddress||wrongNetwork||walletBalanceError||walletBalance===null||Number(walletBalance)<=0||(Number(form.fee)>0&&!isEvmAddress(feeRecipientConfig))}><Wallet size={15}/>{chainBusy?"Deploying…":pendingDeployHash?"Check pending transaction":"Deploy terms on Bradbury"}</Button></DialogFooter></form></DialogContent></Dialog>
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="create-dialog"><DialogHeader><div className="dialog-eyebrow">NEW WORK ITEM <span>01 / 01</span></div><DialogTitle>Create a job</DialogTitle><DialogDescription>Write the terms clearly. Deploy them as a Bradbury contract or add a page-session draft.</DialogDescription></DialogHeader><form onSubmit={createDraft} className="job-form"><div className="preview-inline"><CircleAlert size={15}/><span>Add a browser-only draft, or deploy these frozen terms to Bradbury. An on-chain job starts unfunded; you deposit the reward in a separate confirmed transaction.</span></div><label>Job title<input autoFocus maxLength={90} value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. Review the v2 governance proposal" required/></label><label>What needs to be done?<textarea rows={3} maxLength={1200} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="Describe the work and its boundaries." required/></label><label>What will be delivered?<textarea rows={2} maxLength={700} value={form.delivery} onChange={e=>setForm({...form,delivery:e.target.value})} placeholder="Name the files, links, format, or outcome." required/></label><fieldset className="criteria-field"><legend>Acceptance criteria <small>Measurable checks</small></legend>{criteria.map((value,i)=><div className="criterion-input" key={i}><span>{String(i+1).padStart(2,"0")}</span><input aria-label={`Acceptance criterion ${i+1}`} maxLength={260} value={value} onChange={e=>setCriteria(criteria.map((v,j)=>j===i?e.target.value:v))} placeholder="A reviewer can verify that…"/><button type="button" onClick={()=>setCriteria(criteria.filter((_,j)=>i!==j))} aria-label={`Remove criterion ${i+1}`} disabled={criteria.length===1}><X size={15}/></button></div>)}<button type="button" className="add-criterion" onClick={()=>setCriteria([...criteria,""])}><Plus size={14}/>Add criterion</button><small className="field-hint">Be specific. Use a result that can be checked from the submitted evidence.</small></fieldset><div className="form-row"><label>Evidence type<select value={form.proofType} onChange={e=>setForm({...form,proofType:e.target.value})}><option>Public URL</option><option>Repository link</option><option>Document link</option><option>Text response</option></select></label><label>Deadline<input type="date" min={new Date().toISOString().slice(0,10)} value={form.due} onChange={e=>setForm({...form,due:e.target.value})} required/></label></div><div className="form-row"><label>Reward <span className="input-unit">GEN</span><input type="number" min="0.000001" step="0.01" value={form.reward} onChange={e=>setForm({...form,reward:e.target.value})} placeholder="0.00" required/></label><label>Release fee <span className="input-unit">%</span><input type="number" min="0" max="100" step="0.1" value={form.fee} onChange={e=>setForm({...form,fee:e.target.value})}/></label></div><p className="fee-explain"><Shield size={14}/>Release fee: {Number(form.fee||0)}% on successful release; 0% on refunds. Bradbury Testnet only. {isEvmAddress(feeRecipientConfig) ? "The configured recipient is active for non-zero fees." : "No fee recipient is configured; use 0% until one is set."}</p><div className="chain-create-summary"><b>Bradbury Testnet · Chain 4221</b><span>MetaMask and the GenLayer SDK should both use the official Bradbury RPC (https://rpc-bradbury.genlayer.com, chain 4221). TurnMaster adds 2× outer-EVM gas headroom before wallet approval to avoid Bradbury estimate-edge reverts. MetaMask will show 0 GEN as the deployment value; the {form.reward || "0"} GEN reward is deposited later with Fund.</span><span>Bradbury testnet fees are separate. This button stays disabled until the official Bradbury RPC confirms a non-zero native GEN balance.</span></div>{walletBalanceError&&<p className="form-error" role="alert"><CircleAlert size={15}/>TurnMaster could not verify the native GEN balance from the Bradbury RPC. Use Fix Bradbury RPC to request the official wallet endpoint; transaction buttons stay paused until the balance is verified.</p>}{walletBalance=== "0"&&<p className="form-error" role="alert"><CircleAlert size={15}/>Native GEN balance is 0. A separate GEN token balance cannot pay network fees. Get native testnet GEN first.</p>}{formError&&<p className="form-error" role="alert"><CircleAlert size={15}/>{formError}</p>}{pendingDeployHash&&<div className="chain-tx chain-error" role="alert"><span>Transaction result unknown — do not deploy again yet.</span><a href={`https://explorer-bradbury.genlayer.com/tx/${pendingDeployHash}`} target="_blank" rel="noreferrer">Check this transaction in Bradbury Explorer <ExternalLink size={13}/></a><button type="button" onClick={()=>{setPendingDeployHash("");window.sessionStorage.removeItem("turnmaster-pending-deploy");setFormError("Pending transaction cleared. Only retry if Explorer confirms it failed.");}}>Explorer confirms failure — allow retry</button></div>}<DialogFooter><Button type="button" variant="outline" onClick={()=>setCreateOpen(false)}>Cancel</Button><Button type="submit" className="session-draft-action"><FileText size={15}/>Add session draft</Button><Button type="button" className="primary-action" onClick={createOnchain} disabled={chainBusy||Boolean(pendingDeployHash)||!walletAddress||wrongNetwork||walletBalanceError||walletBalance===null||Number(walletBalance)<=0||(Number(form.fee)>0&&!isEvmAddress(feeRecipientConfig))}><Wallet size={15}/>{chainBusy?"Deploying…":pendingDeployHash?"Check pending transaction":"Deploy terms on Bradbury"}</Button></DialogFooter></form></DialogContent></Dialog>
 
     <Dialog open={importOpen} onOpenChange={setImportOpen}>
       <DialogContent className="detail-dialog">
