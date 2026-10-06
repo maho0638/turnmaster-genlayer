@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import styles from "./reviewer.module.css";
 
 export const metadata: Metadata = {
@@ -45,14 +46,14 @@ export default function ReviewerPage() {
     <main className={styles.shell}>
       <header className={styles.hero}>
         <div className={styles.heroTop}>
-          <a className={styles.brand} href="/" aria-label="Back to TurnMaster work board"><span className={styles.brandBars} aria-hidden="true"><i /><i /><i /></span>turnmaster</a>
-          <div className={styles.heroLinks}><a href="/">Open app</a><a href="https://github.com/maho0638/turnmaster-genlayer" target="_blank" rel="noreferrer">GitHub ↗</a></div>
+          <Link className={styles.brand} href="/" aria-label="Back to TurnMaster work board"><span className={styles.brandBars} aria-hidden="true"><i /><i /><i /></span>turnmaster</Link>
+          <div className={styles.heroLinks}><Link href="/">Open app</Link><a href="https://github.com/maho0638/turnmaster-genlayer" target="_blank" rel="noreferrer">GitHub ↗</a></div>
         </div>
         <div className={styles.kicker}>REVIEWER PROOF · GENLAYER BRADBURY · CHAIN 4221</div>
         <h1>Work is subjective. Payment should not be.</h1>
         <p className={styles.lede}>TurnMaster is a GenLayer-native escrow and dispute-resolution workflow for client/worker jobs. It freezes measurable terms on-chain, accepts public delivery evidence, and uses GenLayer consensus to adjudicate disputed criteria before release or refund.</p>
         <div className={styles.heroActions}>
-          <a className={styles.primary} href="/">Try the work board</a>
+          <Link className={styles.primary} href="/">Try the work board</Link>
           <a className={styles.secondary} href="https://github.com/maho0638/turnmaster-genlayer/blob/main/PORTAL_SUBMISSION.md" target="_blank" rel="noreferrer">Portal submission copy ↗</a>
         </div>
         <div className={styles.signalGrid} aria-label="Project verification summary">
@@ -121,7 +122,7 @@ export default function ReviewerPage() {
         </div>
       </section>
 
-      <footer className={styles.footer}><span>TurnMaster · GenLayer Bradbury</span><span>Testnet only · not legal arbitration · no real funds</span><a href="/">Back to work board →</a></footer>
+      <footer className={styles.footer}><span>TurnMaster · GenLayer Bradbury</span><span>Testnet only · not legal arbitration · no real funds</span><Link href="/">Back to work board →</Link></footer>
     </main>
   );
 }
