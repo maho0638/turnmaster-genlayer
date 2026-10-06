@@ -3,15 +3,16 @@ import test from "node:test";
 import { testnetBradbury } from "genlayer-js/chains";
 import { BRADBURY_CHAIN_ID, BRADBURY_WALLET_NETWORK, formatWeiGen, isEvmAddress } from "../lib/genlayer-network.mjs";
 
-test("MetaMask and the SDK use the official Bradbury GenLayer RPC", () => {
+test("MetaMask EVM network metadata and GenLayer SDK use their distinct official RPCs", () => {
   assert.equal(testnetBradbury.id, BRADBURY_CHAIN_ID);
   assert.equal(Number.parseInt(BRADBURY_WALLET_NETWORK.chainId, 16), testnetBradbury.id);
   assert.equal(BRADBURY_WALLET_NETWORK.chainName, testnetBradbury.name);
-  assert.deepEqual(BRADBURY_WALLET_NETWORK.rpcUrls, ["https://rpc-bradbury.genlayer.com"]);
-  assert.deepEqual(BRADBURY_WALLET_NETWORK.rpcUrls, testnetBradbury.rpcUrls.default.http);
+  assert.deepEqual(BRADBURY_WALLET_NETWORK.rpcUrls, ["https://rpc.testnet-chain.genlayer.com"]);
+  assert.deepEqual(testnetBradbury.rpcUrls.default.http, ["https://rpc-bradbury.genlayer.com"]);
   assert.equal(BRADBURY_WALLET_NETWORK.nativeCurrency.symbol, testnetBradbury.nativeCurrency.symbol);
   assert.equal(BRADBURY_WALLET_NETWORK.nativeCurrency.decimals, testnetBradbury.nativeCurrency.decimals);
-  assert.equal(BRADBURY_WALLET_NETWORK.blockExplorerUrls[0], "https://explorer-bradbury.genlayer.com");
+  assert.equal(BRADBURY_WALLET_NETWORK.blockExplorerUrls[0], "https://explorer.testnet-chain.genlayer.com");
+  assert.equal(testnetBradbury.blockExplorers.default.url.replace(/\/$/, ""), "https://explorer-bradbury.genlayer.com");
 });
 
 test("GEN formatting handles integer and fractional wei amounts", () => {
