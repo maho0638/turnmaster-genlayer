@@ -89,6 +89,8 @@ export default function Home() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [walletProvider, setWalletProvider] = useState<Eip1193Provider | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
+  const [walletBalanceError, setWalletBalanceError] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
   const [wrongNetwork, setWrongNetwork] = useState(false);
   const [query, setQuery] = useState("");
@@ -163,6 +165,25 @@ export default function Home() {
       provider.removeListener?.("accountsChanged", onAccountsChanged);
     };
   }, [walletProvider]);
+
+  useEffect(() => {
+    if (!walletProvider || !walletAddress || wrongNetwork) {
+      setWalletBalance(null);
+      setWalletBalanceError(false);
+      return;
+    }
+    let cancelled = false;
+    setWalletBalance(null);
+    setWalletBalanceError(false);
+    void walletProvider.request({ method: "eth_getBalance", params: [walletAddress, "latest"] })
+      .then((value) => {
+        if (cancelled) return;
+        if (typeof value !== "string" || !/^0x[\\da-f]+$/i.test(value)) throw new Error("Invalid balance response");
+        setWalletBalance(formatWeiGen(BigInt(value).toString()));
+      })
+      .catch(() => { if (!cancelled) setWalletBalanceError(true); });
+    return () => { cancelled = true; };
+  }, [walletProvider, walletAddress, wrongNetwork]);
 
   const filtered = useMemo(() => jobs.filter((job) => (activeStatus === "All" || job.status === activeStatus) && `${job.title} ${job.client} ${job.category}`.toLowerCase().includes(query.toLowerCase())), [jobs, activeStatus, query]);
   const connectWallet = async () => {
@@ -291,7 +312,7 @@ export default function Home() {
     </aside>
 
     <section className="main-area">
-      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress ? <button className="wallet-connected" title={walletAddress}><span className="connected-dot" />{walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}<ChevronDown size={14} /></button> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
+      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress ? <button className="wallet-connected" title={walletAddress} onClick={() => { setWalletBalance(null); setWalletBalanceError(false); void walletProvider?.request({ method: "eth_getBalance", params: [walletAddress, "latest"] }).then((value) => { if (typeof value === "string" && /^0x[\\da-f]+$/i.test(value)) setWalletBalance(formatWeiGen(BigInt(value).toString())); else setWalletBalanceError(true); }).catch(() => setWalletBalanceError(true)); }}><span className="connected-dot" /><span>{walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}<small className="wallet-balance">{wrongNetwork ? "Switch to Bradbury" : walletBalance !== null ? `${walletBalance} GEN` : walletBalanceError ? "GEN balance unavailable" : "Reading GEN balance…"}</small></span><ChevronDown size={14} /></button> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
       <div className="preview-banner"><span className="preview-dot" /><b>LOCAL PREVIEW</b><span>Sample records are illustrative · New contracts use Bradbury Testnet only</span><button aria-label="What does local preview mean?" onClick={() => setNotice("This is an unpublished local preview. Sample records are illustrative. New job contracts can be deployed to Bradbury; this browser does not have a shared on-chain job index.")}><CircleHelp size={15} /></button></div>
       <div className="content-wrap">
         <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />WORKSPACE OVERVIEW</div><h1>Work board</h1><p className="page-subtitle">A clear agreement first. Payment after the work is verified.</p></div><div className="heading-actions"><Button variant="outline" onClick={() => { setContractInput(""); setImportOpen(true); }}><ExternalLink size={15}/>Open contract</Button><Button className="primary-action" onClick={() => { setCreateOpen(true); setFormError(""); }}><Plus size={17} />Create a job</Button></div></div>
