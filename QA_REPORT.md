@@ -17,6 +17,7 @@ Date: 2026-10-06
 | Dispute contract behavior | PASS (local mocks) | Party-only dispute resolution, exact frozen-criteria matching, readable decision explanations, malformed/conflicting outcomes, retrievable and unavailable evidence, no payout on `undetermined`, and no second evaluation after the dispute is terminal. Evidence retrieval and evaluator responses are mocked by the local VM. |
 | SDK/network references | PASS (configuration) | Wallet and SDK follow the Bradbury GenLayer RPC. The direct Chain RPC is diagnostic-only. TurnMaster compensates for estimate-edge failures without exceeding Bradbury's 16,777,216 current per-transaction gas ceiling. |
 | GenLayer SDK | PASS | Lockfile uses stable `genlayer-js` `1.2.0`; the app uses `testnetBradbury`, finalized receipts, and the SDK's EVM gas estimation before wallet approval. |
+| Reviewer proof / Portal evidence | PASS | Dedicated `/reviewer` route, Portal submission copy, reviewer guide, architecture, security model, machine-readable proof manifest, and a Node regression test cover all required review fields without claiming an unverified signed lifecycle. |
 
 The direct-mode tests run against a local VM with public evidence and model responses mocked. They do not establish validator consensus, live RPC behavior, wallet signing, gas/protocol fees, queued transfer finalization, or a real Explorer receipt.
 
@@ -39,6 +40,14 @@ The final browser flow therefore uses the official Bradbury RPC, a deployable-si
 - The board has no indexer or shared persistence. User-created contract addresses must be saved by the user and re-imported after refresh; session drafts are intentionally ephemeral.
 - A dispute with inaccessible or unverifiable evidence ends as `undetermined` with funds still held. There is no retry/appeal or recovery action for that terminal state.
 - A non-zero fee requires `NEXT_PUBLIC_TURNMASTER_FEE_RECIPIENT`; no recipient is configured in this build. Zero-fee Bradbury jobs can be created.
+
+## Portal submission readiness
+
+The public site now contains a dedicated `/reviewer` route designed for a steward to verify the project quickly without reading the entire repository first. It links directly to the production app, full source, Intelligent Contract, architecture, security model, QA report, public CI history, and official GenLayer network documentation.
+
+`PORTAL_SUBMISSION.md` mirrors the Portal fields visible in the current Project submission form: project name, one-sentence summary, detailed description, demo URL, GitHub URL, exact review steps, expected verification result, optional contract-link guidance, and supporting evidence. The evidence test fails if these required sections or the core GenLayer consensus primitives disappear.
+
+This improves reviewability but does not guarantee a 4,000-point award; scoring remains a steward decision. The repository continues to state the remaining signed end-to-end Bradbury gap explicitly.
 
 ## Release status
 

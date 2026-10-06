@@ -18,7 +18,8 @@
     "test:network": "node --test tests/genlayer-network.test.mjs tests/wallet-provider.test.mjs tests/contract-source.test.mjs",
     "db:generate": "drizzle-kit generate",
     "test:live-rpc": "node tests/live-rpc-smoke.mjs",
-    "test:deploy-preflight": "node tests/live-deploy-preflight.mjs"
+    "test:deploy-preflight": "node tests/live-deploy-preflight.mjs",
+    "test:project-proof": "node --test tests/project-proof.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

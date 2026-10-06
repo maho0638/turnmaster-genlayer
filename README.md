@@ -74,6 +74,22 @@ The suite pins the direct runner to runtime `v0.2.12` because the then-current t
 
 There is no shared on-chain board: retain the deployed contract address to re-open the job in a later session. Never enter or commit a private key or seed phrase. Use only testnet GEN. This is not ready for real funds and is not legal arbitration.
 
+## Reviewer proof and Portal-ready evidence
+
+For stewards and GenLayer Portal reviewers, the production build now includes a dedicated read-only proof surface at [turnmaster-genlayer.vercel.app/reviewer](https://turnmaster-genlayer.vercel.app/reviewer). It explains the real trust problem, the full contract lifecycle, the exact GenLayer consensus path, safety invariants, public artifacts, review steps, expected results, automated evidence, and the remaining signed end-to-end limitation.
+
+Submission and technical evidence are kept with the source:
+
+- [Portal submission copy](PORTAL_SUBMISSION.md)
+- [Reviewer guide](docs/REVIEWER_GUIDE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Security model](docs/SECURITY_MODEL.md)
+- [Machine-readable project proof](public/project-proof.json)
+- [QA report](QA_REPORT.md)
+- [Public CI history](https://github.com/maho0638/turnmaster-genlayer/actions)
+
+The reviewer materials are intentionally evidence-first: they distinguish verified automation from the one remaining user-signed Bradbury lifecycle gap instead of presenting sample data as live chain proof.
+
 ## Known limitations
 
 - No TurnMaster contract has been deployed from this repository build. There are no real contract addresses, transactions, balances, or Explorer records to show.

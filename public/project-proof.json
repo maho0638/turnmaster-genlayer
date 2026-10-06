@@ -1,0 +1,21 @@
+{
+  "name": "TurnMaster",
+  "category": "GenLayer Project",
+  "production": "https://turnmaster-genlayer.vercel.app",
+  "reviewerProof": "https://turnmaster-genlayer.vercel.app/reviewer",
+  "repository": "https://github.com/maho0638/turnmaster-genlayer",
+  "network": {
+    "name": "GenLayer Bradbury Testnet",
+    "chainId": 4221,
+    "rpc": "https://rpc-bradbury.genlayer.com",
+    "explorer": "https://explorer-bradbury.genlayer.com"
+  },
+  "contract": {
+    "source": "contracts/TurnMasterEscrow.py",
+    "model": "one escrow contract per job",
+    "consensusPrimitives": ["gl.nondet.web.get", "gl.eq_principle.prompt_comparative"]
+  },
+  "lifecycle": ["create", "deploy", "fund", "claim", "deliver", "revise-or-dispute", "consensus-review", "release-refund-or-undetermined"],
+  "automatedEvidence": ["eslint", "typescript", "network-tests", "contract-source-identity", "live-rpc-smoke", "no-broadcast-deploy-preflight", "production-build-smoke", "direct-mode-contract-tests"],
+  "limitations": ["testnet-only", "no-real-funds", "no-legal-arbitration", "final-signed-compact-contract-lifecycle-still-required"]
+}
