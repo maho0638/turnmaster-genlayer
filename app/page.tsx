@@ -167,19 +167,14 @@ export default function Home() {
   }, [walletProvider]);
 
   useEffect(() => {
-    if (!walletProvider || !walletAddress || wrongNetwork) {
-      setWalletBalance(null);
-      setWalletBalanceError(false);
-      return;
-    }
+    if (!walletProvider || !walletAddress || wrongNetwork) return;
     let cancelled = false;
-    setWalletBalance(null);
-    setWalletBalanceError(false);
-    void walletProvider.request({ method: "eth_getBalance", params: [walletAddress, "latest"] })
+    void Promise.resolve().then(() => walletProvider.request({ method: "eth_getBalance", params: [walletAddress, "latest"] }))
       .then((value) => {
         if (cancelled) return;
         if (typeof value !== "string" || !/^0x[\\da-f]+$/i.test(value)) throw new Error("Invalid balance response");
         setWalletBalance(formatWeiGen(BigInt(value).toString()));
+        setWalletBalanceError(false);
       })
       .catch(() => { if (!cancelled) setWalletBalanceError(true); });
     return () => { cancelled = true; };
