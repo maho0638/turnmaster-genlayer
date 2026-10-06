@@ -72,7 +72,7 @@ export default function ReviewerPage() {
           <div><span>Contract</span><a href="https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482" target="_blank" rel="noreferrer">0xAA85A41F899ED569d32B4CF0FDA2C55461d94482</a></div>
           <div><span>Deploy transaction</span><a href="https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403" target="_blank" rel="noreferrer">0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403</a></div>
           <div><span>Consensus result</span><b>FINALIZED · Bradbury 4221</b></div>
-          <div><span>Open in TurnMaster</span><a href="/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482">Shareable contract view →</a></div>
+          <div><span>Open in TurnMaster</span><Link href="/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482">Shareable contract view →</Link></div>
         </div>
       </section>
 
