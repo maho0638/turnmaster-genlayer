@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Eip1193Provider, OnchainJob, TxResult } from "@/lib/turnmaster-chain";
 import { BRADBURY_CHAIN_ID, BRADBURY_WALLET_NETWORK, formatWeiGen, isEvmAddress, readBradburyNativeBalanceWei } from "@/lib/genlayer-network.mjs";
 import type { Address } from "viem";
+import { loadContractAddresses, rememberContractAddress } from "@/lib/job-registry.mjs";
 
 const ContractWorkflow = dynamic(() => import("@/app/contract-workflow").then((module) => module.ContractWorkflow), {
   ssr: false,
@@ -112,6 +113,7 @@ export default function Home() {
   const router = useRouter();
   const [jobs, setJobs] = useState(starterJobs);
   const [activeStatus, setActiveStatus] = useState<"All" | Status>("All");
+  const [viewMode, setViewMode] = useState<"board" | "mine">("board");
   const [selected, setSelected] = useState<Job>(starterJobs[0]);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -139,6 +141,31 @@ export default function Home() {
     if (!savedHash) return;
     const frame = window.requestAnimationFrame(() => setPendingDeployHash(savedHash));
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const addresses = loadContractAddresses(window.localStorage);
+    if (addresses.length === 0) return;
+    let cancelled = false;
+    void import("@/lib/turnmaster-chain")
+      .then(async ({ readOnchainJob }) => {
+        const loaded = await Promise.allSettled(addresses.map(async (address) => {
+          const record = await readOnchainJob(address as Address);
+          return jobFromChain(address, record);
+        }));
+        if (cancelled) return;
+        const live = loaded
+          .filter((result): result is PromiseFulfilledResult<Job> => result.status === "fulfilled")
+          .map((result) => result.value);
+        if (live.length === 0) return;
+        setJobs((current) => {
+          const liveAddresses = new Set(live.map((job) => job.contractAddress!.toLowerCase()));
+          return [...live, ...current.filter((job) => !job.contractAddress || !liveAddresses.has(job.contractAddress.toLowerCase()))];
+        });
+        setSelected((current) => current.sample ? live[0] : current);
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -224,7 +251,17 @@ export default function Home() {
     return () => { cancelled = true; };
   }, [walletAddress, wrongNetwork]);
 
-  const filtered = useMemo(() => jobs.filter((job) => (activeStatus === "All" || job.status === activeStatus) && `${job.title} ${job.client} ${job.category}`.toLowerCase().includes(query.toLowerCase())), [jobs, activeStatus, query]);
+  const scopedJobs = useMemo(() => {
+    if (viewMode !== "mine") return jobs;
+    if (!walletAddress) return [];
+    const connected = walletAddress.toLowerCase();
+    return jobs.filter((job) => !job.sample && job.chainJob && (
+      job.chainJob.client.toLowerCase() === connected || job.chainJob.worker.toLowerCase() === connected
+    ));
+  }, [jobs, viewMode, walletAddress]);
+  const filtered = useMemo(() => scopedJobs.filter((job) => (activeStatus === "All" || job.status === activeStatus) && `${job.title} ${job.client} ${job.category}`.toLowerCase().includes(query.toLowerCase())), [scopedJobs, activeStatus, query]);
+  const liveJobs = scopedJobs.filter((job) => !job.sample && job.contractAddress);
+  const escrowWei = liveJobs.reduce((total, job) => total + BigInt(job.chainJob?.escrow_wei ?? "0"), BigInt(0));
   const connectWallet = async () => {
     setWalletMessage("");
     const provider = (window as Window & { ethereum?: Eip1193Provider }).ethereum;
@@ -309,6 +346,7 @@ export default function Home() {
         feeRecipient: feeRecipientConfig,
       });
       const job = jobFromChain(result.address, result.job, result.tx);
+      rememberContractAddress(result.address, window.localStorage);
       setJobs((current) => [job, ...current.filter((item) => item.contractAddress?.toLowerCase() !== result.address.toLowerCase())]);
       setSelected(job);
       setActiveStatus("All");
@@ -338,6 +376,7 @@ export default function Home() {
       const { readOnchainJob } = await import("@/lib/turnmaster-chain");
       const record = await readOnchainJob(address as Address);
       const job = jobFromChain(address, record);
+      rememberContractAddress(address, window.localStorage);
       setJobs((current) => [job, ...current.filter((item) => item.contractAddress?.toLowerCase() !== address.toLowerCase())]);
       setSelected(job);
       setActiveStatus("All");
@@ -353,6 +392,7 @@ export default function Home() {
   };
 
   const updateOnchainJob = (address: string, record: OnchainJob, tx?: TxResult) => {
+    rememberContractAddress(address, window.localStorage);
     const previous = jobs.find((item) => item.contractAddress?.toLowerCase() === address.toLowerCase());
     const updated = jobFromChain(address, record, tx ?? previous?.chainTx);
     setJobs((current) => current.map((item) => item.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : item));
@@ -365,10 +405,10 @@ export default function Home() {
       <div className="workspace-switch"><span className="workspace-icon">T</span><span><b>TurnMaster</b><small>Bradbury workspace</small></span><ChevronDown size={15} /></div>
       <div className="nav-label">WORKSPACE</div>
       <nav aria-label="Main navigation" className="main-nav">
-        <button className="nav-item nav-active" onClick={() => { setActiveStatus("All"); setMobileNav(false); }}><BriefcaseBusiness size={17} />Work board<span className="nav-count">{jobs.length}</span></button>
-        <button className="nav-item" onClick={() => { setActiveStatus("Funded"); setMobileNav(false); }}><LockKeyhole size={17} />My escrow</button>
-        <button className="nav-item" onClick={() => { setActiveStatus("In review"); setMobileNav(false); }}><Gavel size={17} />Reviews<span className="nav-dot" /></button>
-        <button className="nav-item" onClick={() => { setActiveStatus("Resolved"); setMobileNav(false); }}><Activity size={17} />Activity</button>
+        <button className={`nav-item ${viewMode === "board" && activeStatus === "All" ? "nav-active" : ""}`} onClick={() => { setViewMode("board"); setActiveStatus("All"); setMobileNav(false); }}><BriefcaseBusiness size={17} />Work board<span className="nav-count">{jobs.length}</span></button>
+        <button className={`nav-item ${viewMode === "mine" ? "nav-active" : ""}`} onClick={() => { setViewMode("mine"); setActiveStatus("All"); setMobileNav(false); const mine = jobs.find((job) => !job.sample && job.chainJob && walletAddress && (job.chainJob.client.toLowerCase() === walletAddress.toLowerCase() || job.chainJob.worker.toLowerCase() === walletAddress.toLowerCase())); if (mine) setSelected(mine); }}><LockKeyhole size={17} />My escrow</button>
+        <button className={`nav-item ${viewMode === "board" && activeStatus === "In review" ? "nav-active" : ""}`} onClick={() => { setViewMode("board"); setActiveStatus("In review"); setMobileNav(false); }}><Gavel size={17} />Reviews<span className="nav-dot" /></button>
+        <button className={`nav-item ${viewMode === "board" && activeStatus === "Resolved" ? "nav-active" : ""}`} onClick={() => { setViewMode("board"); setActiveStatus("Resolved"); setMobileNav(false); }}><Activity size={17} />Activity</button>
       </nav>
       <div className="nav-label nav-label-spaced">MANAGE</div>
       <nav className="main-nav"><button className="nav-item" onClick={() => setCreateOpen(true)}><Plus size={17} />Create a job</button><button className="nav-item" onClick={() => setNotice(`Fee policy: ${defaultReleaseFee}% default on successfully released testnet rewards only. No commission is charged on refunds.`)}><FileText size={17} />Fee policy</button></nav>
@@ -385,13 +425,13 @@ export default function Home() {
         setWalletMessage(`Bradbury RPC could not read this wallet's native GEN balance (${reason}). No transaction was sent.`);
       });
     }}><span className="connected-dot" /><span>{walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}<small className="wallet-balance">{wrongNetwork ? "Switch to Bradbury" : walletBalance !== null ? `${walletBalance} GEN` : walletBalanceError ? "GEN balance unavailable" : "Reading GEN balance…"}</small></span><ChevronDown size={14} /></button> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
-      <div className="preview-banner"><span className="preview-dot" /><b>TESTNET PREVIEW</b><span>Sample records are illustrative · New contracts use Bradbury Testnet only</span><button aria-label="What does testnet preview mean?" onClick={() => setNotice("This is a public Bradbury testnet preview. Sample records are illustrative. New jobs can deploy real testnet contracts, but this browser does not have a shared on-chain job index.")}><CircleHelp size={15} /></button></div>
+      <div className="preview-banner"><span className="preview-dot" /><b>TESTNET PREVIEW</b><span>Sample records are illustrative · New contracts use Bradbury Testnet only</span><button aria-label="What does testnet preview mean?" onClick={() => setNotice("This is a public Bradbury testnet preview. Sample records are illustrative. Successfully deployed or opened contract addresses are remembered in this browser and re-read from Bradbury on reload; there is no shared cross-device index yet.")}><CircleHelp size={15} /></button></div>
       <div className="content-wrap">
-        <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />WORKSPACE OVERVIEW</div><h1>Work board</h1><p className="page-subtitle">A clear agreement first. Payment after the work is verified.</p></div><div className="heading-actions"><Button variant="outline" onClick={() => router.push("/reviewer")}><Shield size={15}/>Reviewer proof</Button><Button variant="outline" onClick={() => { setContractInput(""); setImportOpen(true); }}><ExternalLink size={15}/>Open contract</Button><Button className="primary-action" onClick={() => { setCreateOpen(true); setFormError(""); }}><Plus size={17} />Create a job</Button></div></div>
-        <div className="summary-grid" aria-label="Work board summary"><div className="summary-card"><div className="summary-head"><span>Open work</span><span className="summary-icon icon-blue"><BriefcaseBusiness size={16} /></span></div><strong>{jobs.filter(x => x.status === "Open" || x.status === "Funded").length.toString().padStart(2,"0")}</strong><small>Ready to be picked up</small></div><div className="summary-card"><div className="summary-head"><span>Needs review</span><span className="summary-icon icon-amber"><Clock3 size={16} /></span></div><strong>{jobs.filter(x => x.status === "In review" || x.status === "Delivered").length.toString().padStart(2,"0")}</strong><small>Waiting on client decision</small></div><div className="summary-card"><div className="summary-head"><span>Testnet escrow</span><span className="summary-icon icon-violet"><LockKeyhole size={16} /></span></div><strong>— <em>GEN</em></strong><small>No contract connected</small></div><div className="summary-card fee-card"><div className="summary-head"><span>Release fee</span><span className="summary-icon icon-green"><ArrowUpRight size={16} /></span></div><strong>{defaultReleaseFee}<em>%</em></strong><small>{defaultReleaseFee === "0" ? "0% until a fee recipient is configured" : "Only on successful release"}</small></div></div>
-        <div className="board-toolbar"><div className="board-title"><div><h2>Recent work</h2><span>{filtered.length} records</span></div><span className="sample-label"><span />SAMPLE DATA</span></div><div className="board-controls"><label className="search-box"><Search size={16} /><input ref={searchRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search work" aria-label="Search work" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}<kbd><Command size={11} /> K</kbd></label><label className="filter-button"><Filter size={15} /><span className="sr-only">Filter by status</span><select value={activeStatus} onChange={e => setActiveStatus(e.target.value as "All" | Status)} aria-label="Filter by status">{statuses.map(s=><option value={s} key={s}>{s === "All" ? "All status" : s}</option>)}</select></label></div></div>
-        <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as "All" | Status)} className="status-tabs"><TabsList className="status-tab-list" aria-label="Filter work by status">{statuses.map((status) => <TabsTrigger className="status-tab" key={status} value={status}>{status}{status === "All" && <span>{jobs.length}</span>}</TabsTrigger>)}</TabsList></Tabs>
-        <div className="work-layout"><div className="job-list" aria-label="Work items">{filtered.length ? filtered.map(job => <button key={job.id} className={`job-row ${selected.id === job.id ? "job-row-selected" : ""}`} onClick={() => { setSelected(job); setDetailOpen(true); }}><span className={`client-mark ${job.color}`}>{job.initials}</span><span className="job-main"><span className="job-title">{job.title}{job.sample && <span className="sample-mini">SAMPLE</span>}</span><span className="job-meta"><span>{job.client}</span><i />{job.category}<i />{job.id}</span></span><span className="job-status"><StatusBadge status={job.status} />{job.note && <small>{job.note}</small>}</span><span className="job-reward"><b>{job.reward}</b><small>Due {job.due}</small></span><ChevronDown className="row-chevron" size={16} /></button>) : <div className="empty-state"><span><Search size={21} /></span><h3>No work found</h3><p>Try another search or choose a different status.</p><button onClick={() => {setQuery("");setActiveStatus("All");}}>Clear filters</button></div>}</div>
+        <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-line" />WORKSPACE OVERVIEW</div><h1>{viewMode === "mine" ? "My escrow" : "Work board"}</h1><p className="page-subtitle">{viewMode === "mine" ? "Your remembered Bradbury contracts, re-read from chain." : "A clear agreement first. Payment after the work is verified."}</p></div><div className="heading-actions"><Button variant="outline" onClick={() => router.push("/reviewer")}><Shield size={15}/>Reviewer proof</Button><Button variant="outline" onClick={() => { setContractInput(""); setImportOpen(true); }}><ExternalLink size={15}/>Open contract</Button><Button className="primary-action" onClick={() => { setCreateOpen(true); setFormError(""); }}><Plus size={17} />Create a job</Button></div></div>
+        <div className="summary-grid" aria-label="Work board summary"><div className="summary-card"><div className="summary-head"><span>Open work</span><span className="summary-icon icon-blue"><BriefcaseBusiness size={16} /></span></div><strong>{scopedJobs.filter(x => x.status === "Open" || x.status === "Funded").length.toString().padStart(2,"0")}</strong><small>Ready to be picked up</small></div><div className="summary-card"><div className="summary-head"><span>Needs review</span><span className="summary-icon icon-amber"><Clock3 size={16} /></span></div><strong>{scopedJobs.filter(x => x.status === "In review" || x.status === "Delivered").length.toString().padStart(2,"0")}</strong><small>Waiting on client decision</small></div><div className="summary-card"><div className="summary-head"><span>Testnet escrow</span><span className="summary-icon icon-violet"><LockKeyhole size={16} /></span></div><strong>{liveJobs.length ? formatWeiGen(escrowWei.toString()) : "—"} <em>GEN</em></strong><small>{liveJobs.length ? `${liveJobs.length} live contract${liveJobs.length === 1 ? "" : "s"} loaded` : "No contract connected"}</small></div><div className="summary-card fee-card"><div className="summary-head"><span>Release fee</span><span className="summary-icon icon-green"><ArrowUpRight size={16} /></span></div><strong>{defaultReleaseFee}<em>%</em></strong><small>{defaultReleaseFee === "0" ? "0% until a fee recipient is configured" : "Only on successful release"}</small></div></div>
+        <div className="board-toolbar"><div className="board-title"><div><h2>{viewMode === "mine" ? "My on-chain work" : "Recent work"}</h2><span>{filtered.length} records</span></div><span className="sample-label"><span />{liveJobs.length ? `${liveJobs.length} LIVE CONTRACT${liveJobs.length === 1 ? "" : "S"}` : "SAMPLE DATA"}</span></div><div className="board-controls"><label className="search-box"><Search size={16} /><input ref={searchRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search work" aria-label="Search work" />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}<kbd><Command size={11} /> K</kbd></label><label className="filter-button"><Filter size={15} /><span className="sr-only">Filter by status</span><select value={activeStatus} onChange={e => setActiveStatus(e.target.value as "All" | Status)} aria-label="Filter by status">{statuses.map(s=><option value={s} key={s}>{s === "All" ? "All status" : s}</option>)}</select></label></div></div>
+        <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as "All" | Status)} className="status-tabs"><TabsList className="status-tab-list" aria-label="Filter work by status">{statuses.map((status) => <TabsTrigger className="status-tab" key={status} value={status}>{status}{status === "All" && <span>{scopedJobs.length}</span>}</TabsTrigger>)}</TabsList></Tabs>
+        <div className="work-layout"><div className="job-list" aria-label="Work items">{filtered.length ? filtered.map(job => <button key={job.id} className={`job-row ${selected.id === job.id ? "job-row-selected" : ""}`} onClick={() => { setSelected(job); setDetailOpen(true); }}><span className={`client-mark ${job.color}`}>{job.initials}</span><span className="job-main"><span className="job-title">{job.title}{job.sample && <span className="sample-mini">SAMPLE</span>}</span><span className="job-meta"><span>{job.client}</span><i />{job.category}<i />{job.id}</span></span><span className="job-status"><StatusBadge status={job.status} />{job.note && <small>{job.note}</small>}</span><span className="job-reward"><b>{job.reward}</b><small>Due {job.due}</small></span><ChevronDown className="row-chevron" size={16} /></button>) : <div className="empty-state"><span><Search size={21} /></span><h3>No work found</h3><p>{viewMode === "mine" && !walletAddress ? "Connect your wallet to see remembered contracts where you are the client or worker." : viewMode === "mine" ? "No remembered Bradbury contract matches this wallet and filter. Use Open contract once to add an existing contract to this browser." : "Try another search or choose a different status."}</p><button onClick={() => {setQuery("");setActiveStatus("All");}}>Clear filters</button></div>}</div>
           <aside className="detail-card"><div className="detail-topline"><span className="eyebrow-small">WORK ITEM · {selected.id}</span><button className="more-button" aria-label="More work actions" onClick={() => setNotice("Available actions depend on the work status and connected contract.")}><span>•••</span></button></div><div className="detail-heading"><span className={`client-mark large ${selected.color}`}>{selected.initials}</span><div><h3>{selected.title}</h3><p>Created by {selected.client}</p></div></div><div className="detail-badges"><StatusBadge status={selected.status} />{selected.sample && <span className="sample-outline">SAMPLE</span>}</div><div className="detail-divider"/><div className="detail-facts"><div><span>REWARD</span><b>{selected.reward}</b></div><div><span>DEADLINE</span><b>{selected.due}</b></div><div><span>ESCROW</span><b className="escrow-none"><i />{selected.sample ? "Sample only" : selected.chainJob?.funded ? `${formatWeiGen(selected.chainJob.escrow_wei ?? selected.chainJob.reward_wei)} GEN` : "Not funded"}</b></div></div><div className="detail-section"><div className="detail-section-title"><h4>Acceptance criteria</h4><span>{selected.criteria.length} items</span></div><ol className="criteria-list">{selected.criteria.map((item,i)=><li key={i}><span>{String(i+1).padStart(2,"0")}</span><p>{item}</p></li>)}</ol></div><TermsCopy job={selected}/>{selected.evidence?.length ? <div className="detail-section"><div className="detail-section-title"><h4>Delivery evidence</h4><span>{selected.sample ? "Sample reference" : "On-chain links"}</span></div>{selected.evidence.map((item,i)=><p className="evidence-sample" key={i}><FileText size={14}/>{item}</p>)}</div> : null}{selected.contractAddress && selected.chainJob ? <ContractWorkflow contractAddress={selected.contractAddress} walletAddress={(wrongNetwork||walletBalanceError||walletBalance===null||Number(walletBalance)<=0) ? "" : walletAddress} provider={(wrongNetwork||walletBalanceError||walletBalance===null||Number(walletBalance)<=0) ? null : walletProvider} rpcError={walletBalanceError} job={selected.chainJob} lastTx={selected.chainTx} onUpdated={(record, tx) => updateOnchainJob(selected.contractAddress!, record, tx)} /> : <><div className="detail-warning"><CircleAlert size={16}/><p><b>On-chain actions unavailable</b><span>{selected.sample ? "This clearly marked sample has no contract." : "This is a page-session draft; no contract is deployed for it."}</span></p></div><button className="detail-secondary" onClick={() => { setContractInput(""); setImportOpen(true); }}>Open a Bradbury contract</button></>}</aside></div>
         <footer className="page-footer"><span><BrandMark/>TurnMaster <span className="footer-version">V1 preview</span></span><span>GenLayer Bradbury Testnet <i />Contracts deploy per job</span><a href="https://docs.genlayer.com" target="_blank" rel="noreferrer">GenLayer docs <ExternalLink size={12}/></a></footer>
       </div>
