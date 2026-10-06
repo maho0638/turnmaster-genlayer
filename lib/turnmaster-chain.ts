@@ -34,6 +34,16 @@ export type TxResult = {
   children: string[];
 };
 
+export class SubmittedTransactionError extends Error {
+  readonly hash: string;
+  constructor(hash: string, cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`Transaction was submitted, but TurnMaster could not verify its final status: ${detail}`);
+    this.name = "SubmittedTransactionError";
+    this.hash = hash;
+  }
+}
+
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/;
 
@@ -164,7 +174,11 @@ export async function deployOnchainJob(input: {
       feeRecipient,
     ],
   }) as TransactionHash;
-  await waitForFinalized(client, hash);
+  try {
+    await waitForFinalized(client, hash);
+  } catch (error) {
+    throw new SubmittedTransactionError(hash, error);
+  }
   const transaction = await client.getTransaction({ hash });
   const decoded = transaction.txDataDecoded;
   const deploymentAddress = (decoded as DecodedDeployData | undefined)?.contractAddress;
@@ -196,12 +210,17 @@ export async function writeOnchainJob(input: {
     args: input.args ?? [],
     value: input.value ?? BigInt(0),
   }) as TransactionHash;
-  await waitForFinalized(client, hash);
+  try {
+    await waitForFinalized(client, hash);
+  } catch (error) {
+    throw new SubmittedTransactionError(hash, error);
+  }
   return { hash, children: await transactionChildren(client, hash) };
 }
 
 export function transactionError(error: unknown): string {
-  const candidate = error as { code?: number; shortMessage?: string; message?: string };
+  const candidate = error as { code?: number; shortMessage?: string; message?: string; name?: string };
+  if (candidate?.name === "SubmittedTransactionError") return "MetaMask returned a transaction ID, but Bradbury has not confirmed the result yet. Check the Explorer link below before trying again.";
   if (candidate?.code === 4001) return "The wallet request was rejected. No contract state was changed.";
   if (candidate?.code === -32603 || candidate?.message?.toLowerCase().includes("fetch")) {
     return "Bradbury RPC could not be reached. Check the network connection and try again.";
