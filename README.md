@@ -25,19 +25,19 @@ npm ci
 npm run dev
 ```
 
-The app is English-only and responsive. GenLayer operations use the official `genlayer-js` stable API and `testnetBradbury` preset (Bradbury Testnet, chain ID 4221, native currency GEN). MetaMask and the SDK use GenLayer's official Bradbury RPC (`https://rpc-bradbury.genlayer.com`), which serves Intelligent Contract operations and passes standard `eth_*` wallet calls through to the GenLayer Chain. The direct GenLayer Chain RPC is `https://rpc.testnet-chain.genlayer.com`; use it only for direct L2 access. Both endpoints share chain ID 4221. If MetaMask already has the network saved with a different RPC URL, edit that network and update its RPC URL. TurnMaster verifies the native GEN balance through a separate, read-only `genlayer-js` client on Bradbury; it does not rely on MetaMask's balance response. Contract actions remain paused on an RPC error or a confirmed zero balance. Deployment sends a contract request with 0 GEN value to the consensus contract; the reward amount is in the job terms and is deposited later with the separate Fund action. The wallet still charges the displayed testnet fees.
+The app is English-only and responsive. GenLayer operations use the official `genlayer-js` stable API and `testnetBradbury` preset (Bradbury Testnet, chain ID 4221, native currency GEN). TurnMaster deliberately keeps the injected wallet on the direct GenLayer Chain RPC (`https://rpc.testnet-chain.genlayer.com`) for standard `eth_*` signing while `genlayer-js` sends Intelligent Contract and `gen_*` traffic to the Bradbury GenLayer RPC (`https://rpc-bradbury.genlayer.com`). GenLayer documents that the Bradbury RPC can also proxy standard Ethereum calls; both endpoints use chain ID 4221. The split keeps wallet signing and Intelligent Contract RPC responsibilities explicit. Native GEN balance verification is performed with a direct read-only JSON-RPC request to the Bradbury endpoint rather than trusting the injected wallet's balance response. Contract actions remain paused when Bradbury state cannot be verified or the confirmed native balance is zero. Deployment sends a 0 GEN-value request to the consensus contract; the agreed reward is deposited later with the separate Fund action. The wallet still shows the applicable testnet network fee before approval.
 
 ## Deploy a preview on Vercel
 
-The repository includes `vercel.json` and a Next.js production build script for Vercel. It is connected to GitHub and automatically deploys `main` to [turnmaster-genlayer.vercel.app](https://turnmaster-genlayer.vercel.app). The production build for the RPC and transaction-status update completed successfully on Vercel on 2026-10-06. The regular Sites preview continues to use its Cloudflare Worker adapter. Contract source is copied from the tested Python source into `public/` before development and builds so both Next.js and the Sites/Vite build can load it. No environment variables are required to test zero-fee Bradbury jobs. Keep the wallet on Bradbury Testnet and use only test GEN.
+The repository includes `vercel.json` and a Next.js production build script. It is connected to GitHub and automatically deploys `main` to [turnmaster-genlayer.vercel.app](https://turnmaster-genlayer.vercel.app). Changes are verified in GitHub before they are merged to `main`; deployment remains Git-driven rather than being changed manually in Vercel. The regular Sites preview continues to use its Cloudflare Worker adapter. Contract source is copied from the tested Python source into `public/` before development and builds so both Next.js and the Sites/Vite build can load it. No environment variables are required to test zero-fee Bradbury jobs. Keep the wallet on Bradbury Testnet and use only test GEN.
 
 ## GenLayer network and SDK
 
 - Network: Bradbury Testnet
 - Chain ID: `4221`
 - Native currency: `GEN`
-- Wallet and Intelligent Contract RPC: `https://rpc-bradbury.genlayer.com`
-- Direct GenLayer Chain (L2) RPC: `https://rpc.testnet-chain.genlayer.com`
+- MetaMask `eth_*` signing RPC used by TurnMaster: `https://rpc.testnet-chain.genlayer.com`
+- Intelligent Contract / GenLayer RPC used by the SDK: `https://rpc-bradbury.genlayer.com`
 - Bradbury Explorer: <https://explorer-bradbury.genlayer.com>
 - GenLayer Chain Explorer: <https://explorer.testnet-chain.genlayer.com>
 - Faucet: <https://testnet-faucet.genlayer.foundation>
@@ -61,7 +61,7 @@ python -m pytest tests/test_contract_direct.py -q
 npm run test:network
 ```
 
-The suite pins the direct runner to runtime `v0.2.12` because the then-current tool default attempted to fetch an unavailable `v0.3.0-rc7` artifact. Tests cover creation, invalid terms, exact funding, unauthorized actions, claim, deadline restrictions, delivery, revisions, acceptance, dispute evidence, evidence retrieval/evaluator outcomes, malformed or conflicting adjudication reports, undetermined results, payment/refund idempotency, and cancellation. The network unit test verifies the wallet and SDK use the same documented Bradbury GenLayer RPC, and that the direct Chain RPC is documented separately. The local direct-mode VM mocks evidence retrieval and evaluator responses; this is not a substitute for a Bradbury transaction or validator consensus test. See [`QA_REPORT.md`](QA_REPORT.md) for the checks completed in this build.
+The suite pins the direct runner to runtime `v0.2.12` because the then-current tool default attempted to fetch an unavailable `v0.3.0-rc7` artifact. Tests cover creation, invalid terms, exact funding, unauthorized actions, claim, deadline restrictions, delivery, revisions, acceptance, dispute evidence, evidence retrieval/evaluator outcomes, malformed or conflicting adjudication reports, undetermined results, payment/refund idempotency, and cancellation. The network unit test verifies TurnMaster's explicit split between the direct Chain RPC used for injected-wallet `eth_*` signing and the Bradbury GenLayer RPC used for Intelligent Contract traffic, including an independent Bradbury balance-read path. The local direct-mode VM mocks evidence retrieval and evaluator responses; this is not a substitute for a Bradbury transaction or validator consensus test. See [`QA_REPORT.md`](QA_REPORT.md) for the checks completed in this build.
 
 ## Testnet use and fee configuration
 

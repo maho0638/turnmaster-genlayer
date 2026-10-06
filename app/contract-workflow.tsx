@@ -66,12 +66,25 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
   const [processingText, setProcessingText] = useState("");
   const [localTx, setLocalTx] = useState<TxResult | undefined>(lastTx);
   const [refreshError, setRefreshError] = useState("");
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  const [pendingHash, setPendingHash] = useState("");
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Math.floor(Date.now() / 1000)), 5_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const pendingStorageKey = useMemo(
+    () => `turnmaster-pending-action:${contractAddress.toLowerCase()}`,
+    [contractAddress],
+  );
+
+  useEffect(() => {
+    const saved = window.sessionStorage.getItem(pendingStorageKey);
+    const next = saved && /^0x[a-fA-F0-9]{64}$/.test(saved) ? saved : "";
+    const frame = window.requestAnimationFrame(() => setPendingHash(next));
+    return () => window.cancelAnimationFrame(frame);
+  }, [pendingStorageKey]);
 
   const connected = walletAddress.toLowerCase();
   const client = job.client.toLowerCase();
@@ -105,6 +118,10 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
   const submit = async () => {
     if (!action) return;
     setError("");
+    if (pendingHash) {
+      setError("A previous transaction is still unverified. Check its Bradbury Explorer result before submitting another action.");
+      return;
+    }
     if (!provider || !walletAddress) {
       setError("Connect a Bradbury-compatible wallet before submitting this transaction.");
       return;
@@ -159,6 +176,8 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
         value,
       });
       setLocalTx(tx);
+      setPendingHash("");
+      window.sessionStorage.removeItem(pendingStorageKey);
       setAction(null);
       setProcessingText("");
       try {
@@ -169,6 +188,11 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
         setRefreshError("The transaction finalized. The latest contract state could not be read; use Refresh to try again.");
       }
     } catch (submitError) {
+      const submittedHash = (submitError as { hash?: string })?.hash;
+      if (typeof submittedHash === "string" && /^0x[a-fA-F0-9]{64}$/.test(submittedHash)) {
+        setPendingHash(submittedHash);
+        window.sessionStorage.setItem(pendingStorageKey, submittedHash);
+      }
       setError(transactionError(submitError));
     } finally {
       setBusy(false);
@@ -199,7 +223,7 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
     <div className="chain-state-row"><span>Escrow balance</span><b>{formatWeiGen(job.escrow_wei ?? "0")} GEN</b></div>
     {job.status === "claimed" && <div className="chain-state-row"><span>Worker</span><b className="mono">{job.worker}</b></div>}
 
-    {availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{rpcError ? "MetaMask cannot reach the Bradbury RPC. Use Fix RPC in the top bar; contract actions are paused." : !walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
+    {pendingHash ? <div className="chain-tx chain-error" role="alert"><span>Previous transaction status is still unverified — do not submit another action yet.</span><a href={explorerTransactionUrl(pendingHash)} target="_blank" rel="noreferrer">Check transaction in Bradbury Explorer <ExternalLink size={12} /></a><button type="button" onClick={() => { setPendingHash(""); window.sessionStorage.removeItem(pendingStorageKey); setError(""); }}>Explorer confirms failure — allow retry</button></div> : availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{rpcError ? "TurnMaster cannot verify Bradbury RPC state. Use Check network in the top bar; contract actions are paused." : !walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
 
     {processingText && <p className="chain-processing" role="status"><LoaderCircle size={14} className="spin" />{processingText}</p>}
     {refreshError && <p className="chain-error" role="alert">{refreshError}</p>}

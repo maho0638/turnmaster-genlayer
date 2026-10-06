@@ -223,7 +223,7 @@ export function transactionError(error: unknown): string {
   if (candidate?.name === "SubmittedTransactionError") return "MetaMask returned a transaction ID, but Bradbury has not confirmed the result yet. Check the Explorer link below before trying again.";
   if (candidate?.code === 4001) return "The wallet request was rejected. No contract state was changed.";
   if (candidate?.code === -32603 || candidate?.message?.toLowerCase().includes("fetch")) {
-    return "The Bradbury request failed. MetaMask should use https://rpc.testnet-chain.genlayer.com (chain 4221); GenLayer contract requests use the separate https://rpc-bradbury.genlayer.com endpoint. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";
+    return "The Bradbury request failed. TurnMaster uses https://rpc.testnet-chain.genlayer.com for MetaMask eth_* signing and https://rpc-bradbury.genlayer.com for Intelligent Contract RPC calls on chain 4221. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";
   }
   return candidate?.shortMessage || candidate?.message || "The transaction did not complete. Contract state was not assumed to have changed.";
 }
