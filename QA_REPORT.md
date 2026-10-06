@@ -10,12 +10,12 @@ Date: 2026-10-06
 | TypeScript | PASS | `npx tsc --noEmit` completed without errors. |
 | Production build | PASS | `npm run build` completed. Contract controls and GenLayer SDK are split from the initial board bundle. Vinext still emits its static route-classification advisory. |
 | GenLayer contract direct-mode suite | PASS | `HOME=/tmp/turnmaster-gltest-home python -m pytest tests/test_contract_direct.py -q` — 19 passed. |
-| Bradbury network config unit test | PASS | `npm run test:network` — checks SDK chain id/name, RPC URL, currency and explorer against installed `genlayer-js`, plus GEN formatting and address validation. |
+| Bradbury network config unit test | PASS | `npm run test:network` — checks the wallet GenLayer Chain RPC, separate Bradbury SDK RPC, chain id/name, currency, explorer, GEN formatting and address validation. |
 | Contract source publication check | PASS | `npm run test:network` also verifies the browser-served Python source is byte-identical to `contracts/TurnMasterEscrow.py`; npm syncs it before dev/build. |
 | Vercel project configuration | PREPARED | `vercel.json` selects Next.js, `npm ci`, and `npm run build:vercel`. The repository can be imported from Vercel New Project. |
 | Deterministic contract rules | PASS | Creation validation, empty/vague criteria, zero/negative reward, exact funding, client/worker roles, deadline-late funding and delivery, revision, acceptance, cancellation, and settlement idempotency. |
 | Dispute contract behavior | PASS (local mocks) | Party-only dispute resolution, exact frozen-criteria matching, readable decision explanations, malformed/conflicting outcomes, retrievable and unavailable evidence, no payout on `undetermined`, and no second evaluation after the dispute is terminal. Evidence retrieval and evaluator responses are mocked by the local VM. |
-| SDK/network references | PASS (configuration) | Wallet add-chain metadata is checked against the installed official Bradbury SDK preset and matches chain id, network name, RPC, currency and Explorer. This does not establish live RPC or transaction success. |
+| SDK/network references | PASS (configuration) | Wallet configuration uses the official GenLayer Chain RPC for standard EVM operations; `genlayer-js` retains the official Bradbury RPC for Intelligent Contract operations. Unit tests verify the URLs and chain metadata. This does not establish live RPC or transaction success. |
 | GenLayer SDK | PASS | Lockfile uses stable `genlayer-js` `1.2.0`; the app uses `testnetBradbury`, finalized receipts, and the SDK's EVM gas estimation before wallet approval. |
 
 The direct-mode tests run against a local VM with public evidence and model responses mocked. They do not establish validator consensus, live RPC behavior, wallet signing, gas/protocol fees, queued transfer finalization, or a real Explorer receipt.

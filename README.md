@@ -25,7 +25,7 @@ npm ci
 npm run dev
 ```
 
-The app is English-only and responsive. Wallet connection uses the official `genlayer-js` stable API and `testnetBradbury` preset. The expected network is Bradbury Testnet (chain ID 4221). The app's wallet-add metadata is unit-checked against the installed SDK preset. Contract controls and transaction SDK code load on demand so the initial work board stays lean. The wallet may ask to add or switch to that network. Each wallet transaction asks the user to approve the relevant testnet network fee.
+The app is English-only and responsive. Wallet connection uses the official `genlayer-js` stable API and `testnetBradbury` preset. The expected network is Bradbury Testnet (chain ID 4221). MetaMask uses GenLayer's Chain RPC (`https://rpc.testnet-chain.genlayer.com`) for standard `eth_*` reads and transaction broadcast, while `genlayer-js` uses the Bradbury RPC (`https://rpc-bradbury.genlayer.com`) for Intelligent Contract operations. The network test checks both official endpoints. Contract controls and transaction SDK code load on demand so the initial work board stays lean. The wallet may ask to add or switch to that network. Each wallet transaction asks the user to approve the relevant testnet network fee.
 
 ## Deploy a preview on Vercel
 
@@ -59,7 +59,7 @@ python -m pytest tests/test_contract_direct.py -q
 npm run test:network
 ```
 
-The suite pins the direct runner to runtime `v0.2.12` because the then-current tool default attempted to fetch an unavailable `v0.3.0-rc7` artifact. Tests cover creation, invalid terms, exact funding, unauthorized actions, claim, deadline restrictions, delivery, revisions, acceptance, dispute evidence, evidence retrieval/evaluator outcomes, malformed or conflicting adjudication reports, undetermined results, payment/refund idempotency, and cancellation. The network unit test compares wallet-add parameters to the installed Bradbury SDK preset. The local direct-mode VM mocks evidence retrieval and evaluator responses; this is not a substitute for a Bradbury transaction or validator consensus test. See [`QA_REPORT.md`](QA_REPORT.md) for the checks completed in this build.
+The suite pins the direct runner to runtime `v0.2.12` because the then-current tool default attempted to fetch an unavailable `v0.3.0-rc7` artifact. Tests cover creation, invalid terms, exact funding, unauthorized actions, claim, deadline restrictions, delivery, revisions, acceptance, dispute evidence, evidence retrieval/evaluator outcomes, malformed or conflicting adjudication reports, undetermined results, payment/refund idempotency, and cancellation. The network unit test checks the wallet's official GenLayer Chain RPC separately from the Bradbury SDK RPC. The local direct-mode VM mocks evidence retrieval and evaluator responses; this is not a substitute for a Bradbury transaction or validator consensus test. See [`QA_REPORT.md`](QA_REPORT.md) for the checks completed in this build.
 
 ## Testnet use and fee configuration
 
