@@ -41,3 +41,9 @@ test("reviewer documentation states the final end-to-end limitation instead of o
   assert.match(guide, /still required to close the final end-to-end gap/i);
   assert.match(security, /still needs to be demonstrated/i);
 });
+
+test("transient information notices auto-dismiss", () => {
+  const page = read("app/page.tsx");
+  assert.ok(page.includes('window.setTimeout(() => setNotice(""), 5_000)'));
+  assert.ok(page.includes("window.clearTimeout(timer)"));
+});
