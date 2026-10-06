@@ -233,7 +233,7 @@ export default function Home() {
       if (code === 4001) setWalletMessage("Network setup was cancelled. No GEN transaction was sent.");
       else {
         const reason = error instanceof Error ? error.message : String(error);
-        setWalletMessage(`MetaMask did not apply the RPC update. In MetaMask, open Networks → GenLayer Bradbury → Edit; set RPC URL to https://rpc-bradbury.genlayer.com and save, then reload TurnMaster. Error ${code ?? "unknown"}: ${reason}. No GEN transaction was sent.`);
+        setWalletMessage(`MetaMask did not apply the RPC update. In MetaMask, open Networks → GenLayer Bradbury → Edit; set RPC URL to ${network.rpcUrls[0]} and save, then reload TurnMaster. Error ${code ?? "unknown"}: ${reason}. No GEN transaction was sent.`);
       }
       setWalletBalanceError(true);
     } finally { setNetworkRepairBusy(false); }

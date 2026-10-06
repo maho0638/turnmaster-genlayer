@@ -25,7 +25,7 @@ npm ci
 npm run dev
 ```
 
-The app is English-only and responsive. Wallet connection uses the official `genlayer-js` stable API and `testnetBradbury` preset (Bradbury Testnet, chain ID 4221, native currency GEN). MetaMask and the SDK both use the official Bradbury GenLayer RPC `https://rpc-bradbury.genlayer.com`, which supports intelligent-contract and standard `eth_*` operations. If MetaMask already has the network saved with a different RPC URL, edit that existing network and update its RPC URL; adding the same chain ID may not replace an old saved endpoint. TurnMaster pauses contract actions when MetaMask cannot read the native GEN balance. Deployment sends a contract request with 0 GEN value to the consensus contract; the reward amount is in the job terms and is deposited later with the separate Fund action. The wallet still charges the displayed testnet fees.
+The app is English-only and responsive. GenLayer operations use the official `genlayer-js` stable API and `testnetBradbury` preset (Bradbury Testnet, chain ID 4221, native currency GEN). MetaMask standard wallet calls use GenLayer's documented Chain RPC (`https://rpc.testnet-chain.genlayer.com`); the SDK uses the Bradbury GenLayer RPC (`https://rpc-bradbury.genlayer.com`) for Intelligent Contract operations. Both endpoints share chain ID 4221. If MetaMask already has the network saved with a different RPC URL, edit that network and update its RPC URL. TurnMaster pauses contract actions when MetaMask cannot read the native GEN balance. Deployment sends a contract request with 0 GEN value to the consensus contract; the reward amount is in the job terms and is deposited later with the separate Fund action. The wallet still charges the displayed testnet fees.
 
 ## Deploy a preview on Vercel
 
@@ -36,7 +36,8 @@ The repository includes `vercel.json` and a Next.js production build script for 
 - Network: Bradbury Testnet
 - Chain ID: `4221`
 - Native currency: `GEN`
-- RPC: `https://rpc-bradbury.genlayer.com`
+- Wallet RPC for standard `eth_*` calls: `https://rpc.testnet-chain.genlayer.com`
+- GenLayer RPC for Intelligent Contract operations: `https://rpc-bradbury.genlayer.com`
 - Explorer: <https://explorer-bradbury.genlayer.com>
 - Faucet: <https://testnet-faucet.genlayer.foundation>
 - SDK dependency: [`genlayer-js`](https://www.npmjs.com/package/genlayer-js) stable `1.2.0`, pinned by the lockfile. The v2.0 release candidate targets the separate Consensus v0.6 preview and is not used for Bradbury.
