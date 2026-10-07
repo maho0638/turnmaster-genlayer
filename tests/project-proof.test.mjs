@@ -97,6 +97,9 @@ test("workspace selector opens a functional navigation menu", () => {
   const page = read("app/page.tsx");
   const premium = read("app/premium.module.css");
   assert.ok(page.includes("workspaceMenuOpen"));
+  assert.ok(page.includes("workspaceMenuRef"));
+  assert.ok(page.includes('event.key === "Escape"'));
+  assert.ok(page.includes('document.addEventListener("pointerdown", onPointerDown)'));
   assert.ok(page.includes('aria-haspopup="menu"'));
   assert.ok(page.includes('role="menu"'));
   assert.ok(page.includes(">Reviewer proof<"));
