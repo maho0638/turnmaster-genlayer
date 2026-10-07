@@ -145,3 +145,18 @@ test("release fee summary card opens a real policy dialog", () => {
   assert.ok(premium.includes(".summary-action-card"));
   assert.ok(css.includes(".fee-policy-body"));
 });
+
+
+test("live contract card contains long addresses and preserves dark hover contrast", () => {
+  const workflow = read("app/contract-workflow.tsx");
+  const premium = read("app/premium.module.css");
+  assert.ok(workflow.includes('className="contract-address-link"'));
+  assert.ok(workflow.includes('className="chain-proof-actions"'));
+  assert.ok(workflow.includes('className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"}'));
+  assert.ok(premium.includes("Live contract overflow + hover contrast hardening"));
+  assert.ok(premium.includes("word-break:break-all!important"));
+  assert.ok(premium.includes(".chain-actions .chain-secondary-action:hover"));
+  assert.ok(premium.includes("background:#123b61!important"));
+  assert.ok(premium.includes(".chain-proof-actions button:hover"));
+  assert.ok(premium.includes("color:#ffffff!important"));
+});
