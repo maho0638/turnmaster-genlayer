@@ -185,6 +185,13 @@ export default function Home() {
   }, [notice]);
 
   useEffect(() => {
+    if (!walletMessage || networkRepairBusy) return;
+    const delay = wrongNetwork || walletBalanceError ? 12_000 : 5_000;
+    const timer = window.setTimeout(() => setWalletMessage(""), delay);
+    return () => window.clearTimeout(timer);
+  }, [walletMessage, wrongNetwork, walletBalanceError, networkRepairBusy]);
+
+  useEffect(() => {
     const onShortcut = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); searchRef.current?.focus(); }
     };
