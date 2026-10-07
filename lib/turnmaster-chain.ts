@@ -113,6 +113,22 @@ async function waitForFinalized(
   }
 }
 
+export async function finalizedTransactionState(hash: string): Promise<"success" | "failed" | "pending"> {
+  if (!/^0x[a-fA-F0-9]{64}$/.test(hash)) return "failed";
+  const client = readClient();
+  try {
+    const receipt = await client.waitForTransactionReceipt({
+      hash: hash as TransactionHash,
+      status: TransactionStatus.FINALIZED,
+      interval: 1_000,
+      retries: 1,
+    });
+    return receipt.txExecutionResultName === ExecutionResult.FINISHED_WITH_RETURN ? "success" : "failed";
+  } catch {
+    return "pending";
+  }
+}
+
 async function transactionChildren(client: ReturnType<typeof readClient>, hash: TransactionHash): Promise<string[]> {
   try {
     return await client.getTriggeredTransactionIds({ hash });
