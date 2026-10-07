@@ -975,3 +975,109 @@
   margin:6px 7px!important;
   background:linear-gradient(90deg,transparent,#1f4667 16%,#1f4667 84%,transparent)!important;
 }
+
+
+/* ===== Live contract overflow + hover contrast hardening ===== */
+.premium :global(.chain-workflow){
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.premium :global(.chain-workflow-head){
+  min-width:0!important;
+}
+.premium :global(.contract-address-link){
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  align-items:start!important;
+  gap:6px!important;
+  color:#79b9ee!important;
+  text-decoration:none!important;
+  overflow:hidden!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-all!important;
+  white-space:normal!important;
+  line-height:1.35!important;
+}
+.premium :global(.contract-address-link:hover){
+  color:#a7d8ff!important;
+  text-decoration:underline!important;
+}
+.premium :global(.contract-address-link svg){
+  flex:none!important;
+  margin-top:1px!important;
+  color:currentColor!important;
+}
+.premium :global(.chain-proof-grid){
+  min-width:0!important;
+}
+.premium :global(.chain-proof-grid>div){
+  min-width:0!important;
+  overflow:hidden!important;
+}
+.premium :global(.chain-proof-grid b){
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  color:#f1f7fd!important;
+}
+.premium :global(.chain-state-row){
+  min-width:0!important;
+}
+.premium :global(.chain-state-row b),
+.premium :global(.chain-state-row .mono){
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+}
+.premium :global(.chain-proof-actions button),
+.premium :global(.chain-proof-actions a){
+  border:1px solid #2b5578!important;
+  background:#08233e!important;
+  color:#d8e9f7!important;
+  box-shadow:none!important;
+  transition:background .15s ease,border-color .15s ease,color .15s ease!important;
+}
+.premium :global(.chain-proof-actions button:hover),
+.premium :global(.chain-proof-actions button:focus-visible),
+.premium :global(.chain-proof-actions a:hover),
+.premium :global(.chain-proof-actions a:focus-visible){
+  border-color:#4c7ca5!important;
+  background:#10395d!important;
+  color:#ffffff!important;
+  outline:none!important;
+}
+.premium :global(.chain-actions .chain-secondary-action){
+  border:1px solid #315b7e!important;
+  background:#0a2946!important;
+  color:#dce9f7!important;
+  box-shadow:none!important;
+}
+.premium :global(.chain-actions .chain-secondary-action:hover),
+.premium :global(.chain-actions .chain-secondary-action:focus-visible){
+  border-color:#5687b0!important;
+  background:#123b61!important;
+  color:#ffffff!important;
+  outline:none!important;
+}
+.premium :global(.chain-actions .chain-secondary-action:disabled),
+.premium :global(.chain-proof-actions button:disabled){
+  opacity:.55!important;
+  color:#92a7ba!important;
+  background:#0a2138!important;
+}
+.premium :global(.chain-workflow-head button){
+  color:#7fc2f5!important;
+  background:transparent!important;
+}
+.premium :global(.chain-workflow-head button:hover),
+.premium :global(.chain-workflow-head button:focus-visible){
+  color:#ffffff!important;
+  background:#0f3557!important;
+  border-radius:6px!important;
+  outline:none!important;
+}
