@@ -133,6 +133,7 @@ export default function Home() {
   const [wrongNetwork, setWrongNetwork] = useState(false);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
+  const workspaceMenuRef = useRef<HTMLDivElement>(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [criteria, setCriteria] = useState([""]);
@@ -231,6 +232,22 @@ export default function Home() {
     window.addEventListener("keydown", onShortcut);
     return () => window.removeEventListener("keydown", onShortcut);
   }, []);
+
+  useEffect(() => {
+    if (!workspaceMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!workspaceMenuRef.current?.contains(event.target as Node)) setWorkspaceMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setWorkspaceMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [workspaceMenuOpen]);
 
   useEffect(() => {
     const context = (document as Document & {
@@ -462,7 +479,7 @@ export default function Home() {
   return <main className={`${styles.premium} app-shell`}>
     <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
       <div className="brand"><Image className="brand-logo" src="/turnmaster-logo.webp" alt="TurnMaster" width={180} height={60} priority /><span className="brand-tag">V1</span></div>
-      <div className="workspace-menu-shell">
+      <div className="workspace-menu-shell" ref={workspaceMenuRef}>
         <button type="button" className="workspace-switch" aria-haspopup="menu" aria-expanded={workspaceMenuOpen} onClick={() => setWorkspaceMenuOpen((open) => !open)}>
           <span className="workspace-icon">T</span>
           <span><b>TurnMaster</b><small>Bradbury workspace</small></span>
