@@ -134,6 +134,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
+  const workspaceAutoCloseRef = useRef<number | null>(null);
   const statusFilterRef = useRef<HTMLDivElement>(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -484,11 +485,25 @@ export default function Home() {
     setSelected((current) => current.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : current);
   };
 
+  const cancelWorkspaceAutoClose = () => {
+    if (workspaceAutoCloseRef.current === null) return;
+    window.clearTimeout(workspaceAutoCloseRef.current);
+    workspaceAutoCloseRef.current = null;
+  };
+
+  const scheduleWorkspaceAutoClose = () => {
+    cancelWorkspaceAutoClose();
+    workspaceAutoCloseRef.current = window.setTimeout(() => {
+      setWorkspaceMenuOpen(false);
+      workspaceAutoCloseRef.current = null;
+    }, 260);
+  };
+
   return <main className={`${styles.premium} app-shell`}>
     <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
       <div className="brand"><Image className="brand-logo" src="/turnmaster-logo.webp" alt="TurnMaster" width={180} height={60} priority /><span className="brand-tag">V1</span></div>
-      <div className="workspace-menu-shell" ref={workspaceMenuRef}>
-        <button type="button" className="workspace-switch" aria-haspopup="menu" aria-expanded={workspaceMenuOpen} onClick={() => setWorkspaceMenuOpen((open) => !open)}>
+      <div className="workspace-menu-shell" ref={workspaceMenuRef} onMouseEnter={cancelWorkspaceAutoClose} onMouseLeave={scheduleWorkspaceAutoClose}>
+        <button type="button" className="workspace-switch" aria-haspopup="menu" aria-expanded={workspaceMenuOpen} onClick={() => { cancelWorkspaceAutoClose(); setWorkspaceMenuOpen((open) => !open); }}>
           <span className="workspace-icon">T</span>
           <span><b>TurnMaster</b><small>Bradbury workspace</small></span>
           <ChevronDown className={workspaceMenuOpen ? "workspace-chevron workspace-chevron-open" : "workspace-chevron"} size={15} />
