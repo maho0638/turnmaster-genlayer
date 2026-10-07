@@ -140,3 +140,42 @@ body{background:#020b18;color:#eaf2ff}
 @media(max-width:1180px){.hero-art{left:29%;right:210px}.hero-globe{width:330px}.premium-hero h1{font-size:40px}}
 @media(max-width:920px){.app-shell{grid-template-columns:1fr}.sidebar{background:#04152a}.hero-art{opacity:.5;left:32%;right:120px}.hero-mantra{display:none}}
 @media(max-width:680px){.preview-banner{margin:0 8px}.premium-hero{min-height:142px}.premium-hero h1{font-size:34px}.hero-art{left:28%;right:-40px;opacity:.28}.heading-actions{align-self:flex-end;flex-wrap:wrap;justify-content:flex-end}.summary-card{min-height:100px}.brand-logo{width:165px}.detail-tabs{display:none}}
+
+
+/* Dark portal controls: keep labels readable before hover, not only on hover. */
+.create-dialog [data-slot="dialog-footer"] [data-slot="button"][data-variant="outline"],
+.detail-dialog [data-slot="dialog-footer"] [data-slot="button"][data-variant="outline"],
+.tx-confirm-dialog [data-slot="dialog-footer"] [data-slot="button"][data-variant="outline"]{
+  background:#0a2946!important;
+  color:#dce9f7!important;
+  border:1px solid #315878!important;
+  box-shadow:none!important;
+}
+.create-dialog [data-slot="dialog-footer"] [data-slot="button"][data-variant="outline"]:hover,
+.detail-dialog [data-slot="dialog-footer"] [data-slot="button"][data-variant="outline"]:hover,
+.tx-confirm-dialog [data-slot="dialog-footer"] [data-slot="button"][data-variant="outline"]:hover{
+  background:#123b61!important;
+  color:#fff!important;
+  border-color:#4c79a1!important;
+}
+.create-dialog [data-slot="dialog-close"],
+.detail-dialog [data-slot="dialog-close"],
+.tx-confirm-dialog [data-slot="dialog-close"]{
+  color:#a9bfd6!important;
+  background:transparent!important;
+  opacity:.88!important;
+}
+.create-dialog [data-slot="dialog-close"]:hover,
+.detail-dialog [data-slot="dialog-close"]:hover,
+.tx-confirm-dialog [data-slot="dialog-close"]:hover{
+  color:#fff!important;
+  background:#123b61!important;
+  opacity:1!important;
+}
+.toast-message,.wallet-message{
+  animation:turnmaster-toast-in .18s ease-out;
+}
+@keyframes turnmaster-toast-in{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
