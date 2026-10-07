@@ -160,3 +160,16 @@ test("live contract card contains long addresses and preserves dark hover contra
   assert.ok(premium.includes(".chain-proof-actions button:hover"));
   assert.ok(premium.includes("color:#ffffff!important"));
 });
+
+
+test("live contract modal keeps readable hover states and a two-column proof grid", () => {
+  const css = read("app/globals.css");
+  assert.ok(css.includes("Live Contract narrow-panel layout + portal-safe contrast"));
+  assert.ok(css.includes(".detail-dialog .chain-proof-grid"));
+  assert.ok(css.includes("grid-template-columns:repeat(2,minmax(0,1fr))!important"));
+  assert.ok(css.includes(".detail-dialog .chain-actions .chain-secondary-action:hover"));
+  assert.ok(css.includes("background:#123b61!important"));
+  assert.ok(css.includes("color:#fff!important"));
+  assert.ok(css.includes("white-space:normal!important"));
+  assert.ok(css.includes("overflow-wrap:anywhere!important"));
+});
