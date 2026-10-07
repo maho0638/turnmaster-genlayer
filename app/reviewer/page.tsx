@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import styles from "./reviewer.module.css";
 
 export const metadata: Metadata = {
@@ -48,7 +49,7 @@ export default function ReviewerPage() {
     <main className={styles.shell}>
       <header className={styles.hero}>
         <div className={styles.heroTop}>
-          <Link className={styles.brand} href="/" aria-label="Back to TurnMaster work board"><span className={styles.brandBars} aria-hidden="true"><i /><i /><i /></span>turnmaster</Link>
+          <Link className={styles.brand} href="/" aria-label="Back to TurnMaster work board"><Image className={styles.brandLogo} src="/turnmaster-logo.webp" alt="TurnMaster" width={180} height={60} priority /></Link>
           <div className={styles.heroLinks}><Link href="/">Open app</Link><a href="https://github.com/maho0638/turnmaster-genlayer" target="_blank" rel="noreferrer">GitHub ↗</a></div>
         </div>
         <div className={styles.kicker}>REVIEWER PROOF · GENLAYER BRADBURY · CHAIN 4221</div>

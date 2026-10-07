@@ -57,3 +57,15 @@ test("reviewer proof links the finalized Bradbury deployment", () => {
   assert.ok(page.includes("0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403"));
   assert.ok(page.includes("FINALIZED DEPLOYMENT"));
 });
+
+test("premium dashboard keeps the TurnMaster logo and dark verification UI", () => {
+  const page = read("app/page.tsx");
+  const css = read("app/globals.css");
+  assert.ok(page.includes("/turnmaster-logo.webp"));
+  assert.ok(page.includes("premium-hero"));
+  assert.ok(page.includes("hero-globe"));
+  assert.ok(page.includes("detail-tabs"));
+  assert.ok(css.includes("TurnMaster Premium Dark UI"));
+  assert.ok(css.includes(".verified-mini"));
+  assert.ok(css.includes(".hero-globe"));
+});
