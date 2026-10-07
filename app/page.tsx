@@ -6,14 +6,14 @@ import styles from "./premium.module.css";
 import { useRouter } from "next/navigation";
 import {
   Activity, ArrowUpRight, Bell, BriefcaseBusiness,
-  Check, ChevronDown, CircleAlert, CircleHelp, Clock3, Command, ExternalLink,
-  FileText, Filter, Gavel, LockKeyhole, Menu, Plus,
+  Check, ChevronDown, CircleAlert, CircleHelp, Clock3, Command, Copy, ExternalLink,
+  FileText, Filter, Gavel, LockKeyhole, Menu, Plus, RefreshCw,
   Search, Shield, Wallet, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Eip1193Provider, OnchainJob, TxResult } from "@/lib/turnmaster-chain";
+import { explorerAddressUrl, type Eip1193Provider, type OnchainJob, type TxResult } from "@/lib/turnmaster-chain";
 import { BRADBURY_CHAIN_ID, BRADBURY_WALLET_NETWORK, formatWeiGen, isEvmAddress, readBradburyNativeBalanceWei } from "@/lib/genlayer-network.mjs";
 import type { Address } from "viem";
 import { loadContractAddresses, rememberContractAddress } from "@/lib/job-registry.mjs";
@@ -135,9 +135,11 @@ export default function Home() {
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
   const workspaceAutoCloseRef = useRef<number | null>(null);
   const statusFilterRef = useRef<HTMLDivElement>(null);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [statusFilterOpen, setStatusFilterOpen] = useState(false);
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
   const [feePolicyOpen, setFeePolicyOpen] = useState(false);
   const [criteria, setCriteria] = useState([""]);
   const [form, setForm] = useState({ title: "", description: "", delivery: "", proofType: "Public URL", due: "", reward: "", fee: defaultReleaseFee });
@@ -237,16 +239,18 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!workspaceMenuOpen && !statusFilterOpen) return;
+    if (!workspaceMenuOpen && !statusFilterOpen && !walletMenuOpen) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
       if (workspaceMenuOpen && !workspaceMenuRef.current?.contains(target)) setWorkspaceMenuOpen(false);
       if (statusFilterOpen && !statusFilterRef.current?.contains(target)) setStatusFilterOpen(false);
+      if (walletMenuOpen && !walletMenuRef.current?.contains(target)) setWalletMenuOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setWorkspaceMenuOpen(false);
         setStatusFilterOpen(false);
+        setWalletMenuOpen(false);
       }
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -255,7 +259,7 @@ export default function Home() {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [workspaceMenuOpen, statusFilterOpen]);
+  }, [workspaceMenuOpen, statusFilterOpen, walletMenuOpen]);
 
   useEffect(() => {
     const context = (document as Document & {
@@ -347,6 +351,20 @@ export default function Home() {
   const filtered = useMemo(() => scopedJobs.filter((job) => (activeStatus === "All" || job.status === activeStatus) && `${job.title} ${job.client} ${job.category}`.toLowerCase().includes(query.toLowerCase())), [scopedJobs, activeStatus, query]);
   const liveJobs = scopedJobs.filter((job) => !job.sample && job.contractAddress);
   const escrowWei = liveJobs.reduce((total, job) => total + BigInt(job.chainJob?.escrow_wei ?? "0"), BigInt(0));
+  const refreshWalletBalance = async () => {
+    if (!walletAddress) return;
+    setWalletBalance(null);
+    setWalletBalanceError(false);
+    try {
+      const balance = await readBradburyNativeBalance(walletAddress);
+      setWalletBalance(balance);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      setWalletBalanceError(true);
+      setWalletMessage(`Bradbury RPC could not read this wallet's native GEN balance (${reason}). No transaction was sent.`);
+    }
+  };
+
   const connectWallet = async () => {
     setWalletMessage("");
     const provider = (window as Window & { ethereum?: Eip1193Provider }).ethereum;
@@ -548,15 +566,19 @@ export default function Home() {
     </aside>
 
     <section className="main-area">
-      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork || walletBalanceError ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : walletBalanceError ? "RPC issue" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress && <button className="network-repair" onClick={repairBradburyNetwork} disabled={networkRepairBusy}>{networkRepairBusy ? "Updating…" : "Fix Bradbury RPC"}</button>}{walletAddress ? <button className="wallet-connected" title={walletAddress} onClick={() => {
-      setWalletBalance(null);
-      setWalletBalanceError(false);
-      void readBradburyNativeBalance(walletAddress).then(setWalletBalance).catch((error) => {
-        const reason = error instanceof Error ? error.message : String(error);
-        setWalletBalanceError(true);
-        setWalletMessage(`Bradbury RPC could not read this wallet's native GEN balance (${reason}). No transaction was sent.`);
-      });
-    }}><span className="connected-dot" /><span>{walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}<small className="wallet-balance">{wrongNetwork ? "Switch to Bradbury" : walletBalance !== null ? `${walletBalance} GEN` : walletBalanceError ? "GEN balance unavailable" : "Reading GEN balance…"}</small></span><ChevronDown size={14} /></button> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
+      <header className="topbar"><div className="topbar-left"><button aria-label="Open menu" className="mobile-menu" onClick={() => setMobileNav(!mobileNav)}><Menu size={20} /></button><span className="crumb">Workspace</span><span className="crumb-sep">/</span><b>Work board</b></div><div className="topbar-right"><span className={`network-pill ${wrongNetwork || walletBalanceError ? "network-wrong" : ""}`}><i />{wrongNetwork ? "Wrong network" : walletBalanceError ? "RPC issue" : "Bradbury Testnet"}<span className="chain-id">4221</span></span><button className="icon-button" aria-label="Activity notifications" onClick={() => setNotice("No new account notifications.")}><Bell size={17} /></button>{walletAddress && <button className="network-repair" onClick={repairBradburyNetwork} disabled={networkRepairBusy}>{networkRepairBusy ? "Updating…" : "Fix Bradbury RPC"}</button>}{walletAddress ? <div className="wallet-menu-shell" ref={walletMenuRef}>
+      <button className="wallet-connected" title={walletAddress} aria-haspopup="menu" aria-expanded={walletMenuOpen} onClick={() => setWalletMenuOpen((open) => !open)}><span className="connected-dot" /><span>{walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}<small className="wallet-balance">{wrongNetwork ? "Switch to Bradbury" : walletBalance !== null ? `${walletBalance} GEN` : walletBalanceError ? "GEN balance unavailable" : "Reading GEN balance…"}</small></span><ChevronDown className={walletMenuOpen ? "wallet-chevron wallet-chevron-open" : "wallet-chevron"} size={14} /></button>
+      {walletMenuOpen && <div className="wallet-menu" role="menu" aria-label="Wallet menu">
+        <div className="wallet-menu-head"><span className="connected-dot" /><span><b>Connected wallet</b><small>Bradbury Testnet · 4221</small></span></div>
+        <div className="wallet-menu-address"><span>Address</span><b className="mono">{walletAddress}</b></div>
+        <div className="wallet-menu-balance"><span>Native balance</span><b>{wrongNetwork ? "Switch to Bradbury" : walletBalance !== null ? `${walletBalance} GEN` : walletBalanceError ? "Unavailable" : "Reading…"}</b></div>
+        <div className="wallet-menu-actions">
+          <button type="button" role="menuitem" onClick={() => void refreshWalletBalance()}><RefreshCw size={14}/>Refresh balance</button>
+          <button type="button" role="menuitem" onClick={() => { void navigator.clipboard.writeText(walletAddress); setNotice("Wallet address copied."); }}><Copy size={14}/>Copy address</button>
+          <a role="menuitem" href={explorerAddressUrl(walletAddress)} target="_blank" rel="noreferrer"><ExternalLink size={14}/>Open in Explorer</a>
+        </div>
+      </div>}
+    </div> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
       <div className="preview-banner"><span className="preview-dot" /><b>TESTNET PREVIEW</b><span>Sample records are illustrative · New contracts use Bradbury Testnet only</span><button aria-label="What does testnet preview mean?" onClick={() => setNotice("This is a public Bradbury testnet preview. Sample records are illustrative. Successfully deployed or opened contract addresses are remembered in this browser and re-read from Bradbury on reload; there is no shared cross-device index yet.")}><CircleHelp size={15} /></button></div>
       <div className="content-wrap">
         <div className="page-heading premium-hero">
