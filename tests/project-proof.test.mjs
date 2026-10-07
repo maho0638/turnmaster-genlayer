@@ -219,3 +219,10 @@ test("topbar wallet chevron opens a real accessible wallet menu", () => {
   assert.ok(premium.includes(".wallet-menu-actions"));
   assert.ok(premium.includes(".wallet-chevron-open"));
 });
+
+
+test("Bradbury RPC repair button only appears for an actual network or RPC problem", () => {
+  const page = read("app/page.tsx");
+  assert.ok(page.includes('walletAddress && (wrongNetwork || walletBalanceError || networkRepairBusy)'));
+  assert.ok(page.includes('"Fix Bradbury RPC"'));
+});
