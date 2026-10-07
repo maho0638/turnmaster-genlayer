@@ -1086,3 +1086,141 @@
   border-radius:6px!important;
   outline:none!important;
 }
+
+
+/* ===== Functional topbar wallet menu ===== */
+.premium :global(.topbar){
+  position:relative!important;
+  z-index:80!important;
+  overflow:visible!important;
+}
+.premium :global(.topbar-right){
+  overflow:visible!important;
+}
+.premium :global(.wallet-menu-shell){
+  position:relative!important;
+  z-index:120!important;
+}
+.premium :global(.wallet-connected){
+  cursor:pointer!important;
+  min-width:190px!important;
+  justify-content:flex-start!important;
+  transition:border-color .16s ease,background .16s ease,box-shadow .16s ease!important;
+}
+.premium :global(.wallet-connected:hover),
+.premium :global(.wallet-connected[aria-expanded="true"]){
+  background:#0d2a49!important;
+  border-color:#3b709d!important;
+  box-shadow:0 10px 26px rgba(0,0,0,.2)!important;
+}
+.premium :global(.wallet-connected>span:nth-child(2)){
+  min-width:0!important;
+  flex:1!important;
+}
+.premium :global(.wallet-chevron){
+  flex:none!important;
+  margin-left:auto!important;
+  color:#8faccc!important;
+  transition:transform .16s ease,color .16s ease!important;
+}
+.premium :global(.wallet-chevron-open){
+  transform:rotate(180deg)!important;
+  color:#ffd167!important;
+}
+.premium :global(.wallet-menu){
+  position:absolute!important;
+  top:calc(100% + 8px)!important;
+  right:0!important;
+  width:310px!important;
+  padding:10px!important;
+  border:1px solid #2c5a82!important;
+  border-radius:14px!important;
+  background:
+    radial-gradient(circle at 12% -8%,rgba(37,119,191,.2),transparent 36%),
+    linear-gradient(180deg,#09233f 0%,#06172d 100%)!important;
+  box-shadow:0 24px 56px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.04)!important;
+}
+.premium :global(.wallet-menu-head){
+  display:grid!important;
+  grid-template-columns:8px minmax(0,1fr)!important;
+  gap:9px!important;
+  align-items:center!important;
+  padding:8px 9px 10px!important;
+  border-bottom:1px solid #1d4263!important;
+}
+.premium :global(.wallet-menu-head b){
+  display:block!important;
+  color:#f3f8fd!important;
+  font-size:11px!important;
+}
+.premium :global(.wallet-menu-head small){
+  display:block!important;
+  margin-top:3px!important;
+  color:#7fa5c8!important;
+  font-size:9px!important;
+}
+.premium :global(.wallet-menu-address),
+.premium :global(.wallet-menu-balance){
+  display:grid!important;
+  gap:4px!important;
+  padding:10px 9px!important;
+  border-bottom:1px solid #173a5a!important;
+}
+.premium :global(.wallet-menu-address span),
+.premium :global(.wallet-menu-balance span){
+  color:#718eaa!important;
+  font-size:8px!important;
+  font-weight:800!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+}
+.premium :global(.wallet-menu-address b){
+  color:#bdd8ef!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-all!important;
+}
+.premium :global(.wallet-menu-balance b){
+  color:#7ee5ba!important;
+  font-size:11px!important;
+  overflow-wrap:anywhere!important;
+}
+.premium :global(.wallet-menu-actions){
+  display:grid!important;
+  gap:5px!important;
+  padding-top:8px!important;
+}
+.premium :global(.wallet-menu-actions button),
+.premium :global(.wallet-menu-actions a){
+  width:100%!important;
+  min-height:36px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  padding:8px 10px!important;
+  border:1px solid transparent!important;
+  border-radius:8px!important;
+  background:transparent!important;
+  color:#c9dceb!important;
+  font:inherit!important;
+  font-size:10px!important;
+  font-weight:700!important;
+  text-decoration:none!important;
+  text-align:left!important;
+  cursor:pointer!important;
+}
+.premium :global(.wallet-menu-actions button:hover),
+.premium :global(.wallet-menu-actions button:focus-visible),
+.premium :global(.wallet-menu-actions a:hover),
+.premium :global(.wallet-menu-actions a:focus-visible){
+  border-color:#2f628d!important;
+  background:#0f3558!important;
+  color:#fff!important;
+  outline:none!important;
+}
+@media(max-width:760px){
+  .premium :global(.wallet-connected){min-width:0!important}
+  .premium :global(.wallet-menu){width:min(310px,calc(100vw - 28px))!important}
+}
