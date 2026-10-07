@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import styles from "./premium.module.css";
 import { useRouter } from "next/navigation";
 import {
   Activity, ArrowUpRight, Bell, BriefcaseBusiness,
@@ -414,7 +415,7 @@ export default function Home() {
     setSelected((current) => current.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : current);
   };
 
-  return <main className="app-shell">
+  return <main className={`${styles.premium} app-shell`}>
     <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
       <div className="brand"><Image className="brand-logo" src="/turnmaster-logo.webp" alt="TurnMaster" width={180} height={60} priority /><span className="brand-tag">V1</span></div>
       <div className="workspace-switch"><span className="workspace-icon">T</span><span><b>TurnMaster</b><small>Bradbury workspace</small></span><ChevronDown size={15} /></div>
