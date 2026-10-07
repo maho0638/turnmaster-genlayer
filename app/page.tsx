@@ -244,9 +244,10 @@ export default function Home() {
       if (statusFilterOpen && !statusFilterRef.current?.contains(target)) setStatusFilterOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setWorkspaceMenuOpen(false);
-      setStatusFilterOpen(false);
+      if (event.key === "Escape") {
+        setWorkspaceMenuOpen(false);
+        setStatusFilterOpen(false);
+      }
     };
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
