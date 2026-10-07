@@ -173,3 +173,26 @@ test("live contract modal keeps readable hover states and a two-column proof gri
   assert.ok(css.includes("white-space:normal!important"));
   assert.ok(css.includes("overflow-wrap:anywhere!important"));
 });
+
+
+test("secondary Live Contract actions do not inherit the shared primary Button hover", () => {
+  const workflow = read("app/contract-workflow.tsx");
+  const css = read("app/globals.css");
+  assert.ok(workflow.includes('className="chain-secondary-action chain-native-action"'));
+  assert.ok(workflow.includes('? <Button key={item} type="button" className="primary-action"'));
+  assert.ok(css.includes(".chain-secondary-action{border:1px solid #315b7e!important;background:#0a2946!important"));
+  assert.ok(css.includes(".chain-secondary-action:hover,.chain-secondary-action:focus-visible"));
+  assert.ok(css.includes("background:#123b61!important"));
+  assert.ok(css.includes(".chain-native-action{appearance:none;font:inherit}"));
+});
+
+test("Live Contract proof summary uses two columns and never ellipsizes role or status", () => {
+  const css = read("app/globals.css");
+  const premium = read("app/premium.module.css");
+  assert.ok(css.includes(".chain-proof-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))"));
+  assert.ok(css.includes("white-space:normal;overflow-wrap:anywhere;line-height:1.25"));
+  assert.ok(premium.includes("grid-template-columns:repeat(2,minmax(0,1fr))!important"));
+  assert.ok(premium.includes("white-space:normal!important"));
+  assert.ok(premium.includes("text-overflow:clip!important"));
+  assert.ok(!premium.includes("white-space:nowrap!important;\n  color:#f1f7fd!important;"));
+});
