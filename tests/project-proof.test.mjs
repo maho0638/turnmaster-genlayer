@@ -69,3 +69,14 @@ test("premium dashboard keeps the TurnMaster logo and dark verification UI", () 
   assert.ok(css.includes(".verified-mini"));
   assert.ok(css.includes(".hero-globe"));
 });
+
+test("wallet notices auto-dismiss and dark dialog outline buttons remain readable", () => {
+  const page = read("app/page.tsx");
+  const css = read("app/globals.css");
+  assert.ok(page.includes('window.setTimeout(() => setWalletMessage(""), delay)'));
+  assert.ok(page.includes("wrongNetwork || walletBalanceError ? 12_000 : 5_000"));
+  assert.ok(css.includes('data-variant="outline"'));
+  assert.ok(css.includes("background:#0a2946!important"));
+  assert.ok(css.includes("color:#dce9f7!important"));
+  assert.ok(css.includes('[data-slot="dialog-close"]'));
+});
