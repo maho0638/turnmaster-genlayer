@@ -107,3 +107,28 @@ test("workspace selector opens a functional navigation menu", () => {
   assert.ok(premium.includes(".workspace-menu-shell"));
   assert.ok(premium.includes(".workspace-chevron-open"));
 });
+
+
+test("status filter is a readable custom menu instead of the native select", () => {
+  const page = read("app/page.tsx");
+  const premium = read("app/premium.module.css");
+  assert.ok(page.includes("statusFilterOpen"));
+  assert.ok(page.includes('aria-label="Status filters"'));
+  assert.ok(page.includes('role="menuitemradio"'));
+  assert.ok(page.includes("status-filter-option-active"));
+  assert.ok(!page.includes('<select value={activeStatus}'));
+  assert.ok(premium.includes(".status-filter-menu"));
+  assert.ok(premium.includes("color:#c8daea!important"));
+});
+
+test("release fee summary card opens a real policy dialog", () => {
+  const page = read("app/page.tsx");
+  const premium = read("app/premium.module.css");
+  const css = read("app/globals.css");
+  assert.ok(page.includes('aria-label="Open release fee policy"'));
+  assert.ok(page.includes("setFeePolicyOpen(true)"));
+  assert.ok(page.includes("Release fee policy"));
+  assert.ok(page.includes("Refunds are charged 0%."));
+  assert.ok(premium.includes(".summary-action-card"));
+  assert.ok(css.includes(".fee-policy-body"));
+});
