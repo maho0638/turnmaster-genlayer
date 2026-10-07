@@ -80,3 +80,15 @@ test("wallet notices auto-dismiss and dark dialog outline buttons remain readabl
   assert.ok(css.includes("color:#dce9f7!important"));
   assert.ok(css.includes('[data-slot="dialog-close"]'));
 });
+
+test("wallet session silently restores after refresh and modal controls have explicit contrast", () => {
+  const page = read("app/page.tsx");
+  const workflow = read("app/contract-workflow.tsx");
+  assert.ok(page.includes('method: "eth_accounts"'));
+  assert.ok(page.includes('method: "eth_chainId"'));
+  assert.ok(page.includes("setWalletProvider(provider)"));
+  assert.ok(page.includes("Connected wallet restored."));
+  assert.ok(page.includes('backgroundColor: "#0a2946"'));
+  assert.ok(page.includes('style={modalSecondaryStyle} onClick={() => setDetailOpen(false)}>Close'));
+  assert.ok(workflow.includes('style={modalSecondaryStyle} disabled={busy}'));
+});
