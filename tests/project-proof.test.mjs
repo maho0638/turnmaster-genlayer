@@ -152,7 +152,8 @@ test("live contract card contains long addresses and preserves dark hover contra
   const premium = read("app/premium.module.css");
   assert.ok(workflow.includes('className="contract-address-link"'));
   assert.ok(workflow.includes('className="chain-proof-actions"'));
-  assert.ok(workflow.includes('className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"}'));
+  assert.ok(workflow.includes('className="chain-secondary-action chain-native-action"'));
+  assert.ok(workflow.includes('className="primary-action"'));
   assert.ok(premium.includes("Live contract overflow + hover contrast hardening"));
   assert.ok(premium.includes("word-break:break-all!important"));
   assert.ok(premium.includes(".chain-actions .chain-secondary-action:hover"));
