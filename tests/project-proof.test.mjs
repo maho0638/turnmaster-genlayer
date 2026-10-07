@@ -92,3 +92,15 @@ test("wallet session silently restores after refresh and modal controls have exp
   assert.ok(page.includes('style={modalSecondaryStyle} onClick={() => setDetailOpen(false)}>Close'));
   assert.ok(workflow.includes('style={modalSecondaryStyle} disabled={busy}'));
 });
+
+test("workspace selector opens a functional navigation menu", () => {
+  const page = read("app/page.tsx");
+  const premium = read("app/premium.module.css");
+  assert.ok(page.includes("workspaceMenuOpen"));
+  assert.ok(page.includes('aria-haspopup="menu"'));
+  assert.ok(page.includes('role="menu"'));
+  assert.ok(page.includes(">Reviewer proof<"));
+  assert.ok(page.includes(">Open contract<"));
+  assert.ok(premium.includes(".workspace-menu-shell"));
+  assert.ok(premium.includes(".workspace-chevron-open"));
+});
