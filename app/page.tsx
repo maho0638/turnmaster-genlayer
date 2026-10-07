@@ -134,6 +134,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [criteria, setCriteria] = useState([""]);
   const [form, setForm] = useState({ title: "", description: "", delivery: "", proofType: "Public URL", due: "", reward: "", fee: defaultReleaseFee });
   const [formError, setFormError] = useState("");
@@ -461,7 +462,20 @@ export default function Home() {
   return <main className={`${styles.premium} app-shell`}>
     <aside className={`sidebar ${mobileNav ? "sidebar-open" : ""}`}>
       <div className="brand"><Image className="brand-logo" src="/turnmaster-logo.webp" alt="TurnMaster" width={180} height={60} priority /><span className="brand-tag">V1</span></div>
-      <div className="workspace-switch"><span className="workspace-icon">T</span><span><b>TurnMaster</b><small>Bradbury workspace</small></span><ChevronDown size={15} /></div>
+      <div className="workspace-menu-shell">
+        <button type="button" className="workspace-switch" aria-haspopup="menu" aria-expanded={workspaceMenuOpen} onClick={() => setWorkspaceMenuOpen((open) => !open)}>
+          <span className="workspace-icon">T</span>
+          <span><b>TurnMaster</b><small>Bradbury workspace</small></span>
+          <ChevronDown className={workspaceMenuOpen ? "workspace-chevron workspace-chevron-open" : "workspace-chevron"} size={15} />
+        </button>
+        {workspaceMenuOpen && <div className="workspace-menu" role="menu" aria-label="TurnMaster workspace">
+          <div className="workspace-menu-status"><span className="workspace-status-dot" /><span><b>Bradbury Testnet</b><small>Chain 4221 · active workspace</small></span><Check size={14} /></div>
+          <button type="button" role="menuitem" onClick={() => { setViewMode("board"); setActiveStatus("All"); setWorkspaceMenuOpen(false); setMobileNav(false); }}><BriefcaseBusiness size={15}/><span><b>Work board</b><small>Browse all work items</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { setViewMode("mine"); setActiveStatus("All"); setWorkspaceMenuOpen(false); setMobileNav(false); const mine = jobs.find((job) => !job.sample && job.chainJob && walletAddress && (job.chainJob.client.toLowerCase() === walletAddress.toLowerCase() || job.chainJob.worker.toLowerCase() === walletAddress.toLowerCase())); if (mine) setSelected(mine); }}><LockKeyhole size={15}/><span><b>My escrow</b><small>Contracts linked to this wallet</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { setWorkspaceMenuOpen(false); router.push("/reviewer"); }}><Shield size={15}/><span><b>Reviewer proof</b><small>Open public verification view</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { setWorkspaceMenuOpen(false); setContractInput(""); setImportOpen(true); }}><ExternalLink size={15}/><span><b>Open contract</b><small>Load a Bradbury contract address</small></span></button>
+        </div>}
+      </div>
       <div className="nav-label">WORKSPACE</div>
       <nav aria-label="Main navigation" className="main-nav">
         <button className={`nav-item ${viewMode === "board" && activeStatus === "All" ? "nav-active" : ""}`} onClick={() => { setViewMode("board"); setActiveStatus("All"); setMobileNav(false); }}><BriefcaseBusiness size={17} />Work board<span className="nav-count">{jobs.length}</span></button>
