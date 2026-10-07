@@ -197,3 +197,25 @@ test("Live Contract proof summary uses two columns and never ellipsizes role or 
   assert.ok(premium.includes("text-overflow:clip!important"));
   assert.ok(!premium.includes("white-space:nowrap!important;\n  color:#f1f7fd!important;"));
 });
+
+
+test("processing transaction dialog can always close from the X button", () => {
+  const workflow = read("app/contract-workflow.tsx");
+  assert.ok(workflow.includes('onOpenChange={(open) => { if (!open) setAction(null); }}'));
+  assert.ok(!workflow.includes('if (!open && !busy) setAction(null)'));
+});
+
+test("topbar wallet chevron opens a real accessible wallet menu", () => {
+  const page = read("app/page.tsx");
+  const premium = read("app/premium.module.css");
+  assert.ok(page.includes("walletMenuOpen"));
+  assert.ok(page.includes('aria-haspopup="menu"'));
+  assert.ok(page.includes('aria-label="Wallet menu"'));
+  assert.ok(page.includes("Refresh balance"));
+  assert.ok(page.includes("Copy address"));
+  assert.ok(page.includes("Open in Explorer"));
+  assert.ok(page.includes("walletMenuRef"));
+  assert.ok(premium.includes(".wallet-menu-shell"));
+  assert.ok(premium.includes(".wallet-menu-actions"));
+  assert.ok(premium.includes(".wallet-chevron-open"));
+});
