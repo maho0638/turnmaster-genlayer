@@ -58,10 +58,16 @@ test("reviewer proof links the finalized Bradbury deployment", () => {
   assert.ok(page.includes("FINALIZED DEPLOYMENT"));
 });
 
-test("premium dashboard keeps the TurnMaster logo and dark verification UI", () => {
+test("premium dashboard keeps a high-contrast TurnMaster brand and dark verification UI", () => {
   const page = read("app/page.tsx");
   const css = read("app/globals.css");
-  assert.ok(page.includes("/turnmaster-logo.webp"));
+  const premium = read("app/premium.module.css");
+  assert.ok(page.includes('className="brand-wordmark"'));
+  assert.ok(page.includes('className="brand-turn">Turn'));
+  assert.ok(page.includes('className="brand-master">Master'));
+  assert.ok(premium.includes(".brand-turn"));
+  assert.ok(premium.includes("color:#f5f9ff!important"));
+  assert.ok(premium.includes(".brand-master"));
   assert.ok(page.includes("premium-hero"));
   assert.ok(page.includes("hero-globe"));
   assert.ok(page.includes("detail-tabs"));
@@ -109,6 +115,10 @@ test("workspace selector opens a functional navigation menu", () => {
   assert.ok(page.includes(">Open contract<"));
   assert.ok(premium.includes(".workspace-menu-shell"));
   assert.ok(premium.includes(".workspace-chevron-open"));
+  assert.ok(page.includes("workspace-menu-item-active"));
+  assert.ok(page.includes("workspace-menu-chain"));
+  assert.ok(premium.includes(".workspace-menu-topline"));
+  assert.ok(premium.includes(".workspace-menu-item-icon"));
 });
 
 
