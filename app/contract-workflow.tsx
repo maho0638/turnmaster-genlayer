@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import {
   explorerAddressUrl,
   explorerTransactionUrl,
+  finalizedTransactionState,
   formatWeiGen,
   isContractAddress,
   readOnchainJob,
@@ -229,8 +230,23 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
     setRefreshError("");
     setBusy(true);
     try {
+      let verifiedTx: TxResult | undefined;
+      if (pendingHash) {
+        const pendingState = await finalizedTransactionState(pendingHash);
+        if (pendingState === "success") {
+          verifiedTx = { hash: pendingHash as `0x${string}`, children: [] };
+          setPendingHash("");
+          window.sessionStorage.removeItem(pendingStorageKey);
+          setLocalTx(verifiedTx);
+          setError("");
+        } else if (pendingState === "failed") {
+          setRefreshError("The submitted transaction finalized but contract execution was not successful. Confirm the failure in Bradbury Explorer before clearing the retry lock.");
+        } else {
+          setRefreshError("The submitted transaction is not finalized yet. Wait for Bradbury finalization and refresh again.");
+        }
+      }
       const updated = await readOnchainJob(contractAddress as Address);
-      onUpdated(updated);
+      onUpdated(updated, verifiedTx);
     } catch (loadError) {
       setRefreshError(transactionError(loadError));
     } finally {
@@ -260,7 +276,7 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
     <div className="chain-state-row"><span>Deadline</span><b>{new Date(job.deadline * 1000).toLocaleDateString()}</b></div>
     {job.status === "claimed" && <div className="chain-state-row"><span>Worker</span><b className="mono">{job.worker}</b></div>}
 
-    {pendingHash ? <div className="chain-tx chain-error" role="alert"><span>Previous transaction status is still unverified — do not submit another action yet.</span><a href={explorerTransactionUrl(pendingHash)} target="_blank" rel="noreferrer">Check transaction in Bradbury Explorer <ExternalLink size={12} /></a><button type="button" onClick={() => { setPendingHash(""); window.sessionStorage.removeItem(pendingStorageKey); setError(""); }}>Explorer confirms failure — allow retry</button></div> : availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{rpcError ? "TurnMaster cannot verify Bradbury RPC state. Use Check network in the top bar; contract actions are paused." : !walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
+    {pendingHash ? <div className="chain-tx chain-error" role="alert"><span>A submitted transaction is still locally marked as unverified. Re-check Bradbury before sending another action.</span><a href={explorerTransactionUrl(pendingHash)} target="_blank" rel="noreferrer">Check transaction in Bradbury Explorer <ExternalLink size={12} /></a><button type="button" onClick={refresh} disabled={busy}>{busy ? "Checking finalized status…" : "Re-check finalized transaction"}</button><button type="button" onClick={() => { setPendingHash(""); window.sessionStorage.removeItem(pendingStorageKey); setError(""); setRefreshError(""); }}>Clear only if Explorer shows failure</button></div> : availableActions.length > 0 ? <div className="chain-actions">{availableActions.map((item) => <Button key={item} type="button" className={item === "accept" || item === "fund" ? "primary-action" : "chain-secondary-action"} disabled={busy} onClick={() => startAction(item)}>{txLabels[item].title}</Button>)}</div> : <p className="chain-no-action">{rpcError ? "TurnMaster cannot verify Bradbury RPC state. Use Check network in the top bar; contract actions are paused." : !walletAddress ? "Connect a wallet to see actions for your role." : job.status === "undetermined" ? "The review could not verify an outcome. No payout or refund was sent." : "No transaction is available for this wallet and contract state."}</p>}
 
     {processingText && <p className="chain-processing" role="status"><LoaderCircle size={14} className="spin" />{processingText}</p>}
     {refreshError && <p className="chain-error" role="alert">{refreshError}</p>}
