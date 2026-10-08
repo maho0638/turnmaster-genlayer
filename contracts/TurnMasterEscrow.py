@@ -229,7 +229,7 @@ class TurnMasterEscrow(gl.Contract):
             try:
                 for url in urls:
                     response = gl.nondet.web.get(url)
-                    if response.status_code >= 400:
+                    if int(getattr(response, "status_code", getattr(response, "status", 200))) >= 400:
                         return json.dumps(["unverifiable"] * len(criteria))
                     body = response.body.decode("utf-8", errors="replace")[:4000]
                     if not body.strip():
