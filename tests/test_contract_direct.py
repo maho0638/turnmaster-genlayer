@@ -418,3 +418,22 @@ def test_expired_revision_request_refunds_client(escrow):
     state = json.loads(job.get_job())
     assert state["status"] == "resolved"
     assert json.loads(state["decision"])["outcome"] == "deadline_missed"
+
+
+def test_http_error_cannot_be_overridden_by_a_positive_model_verdict(escrow):
+    vm, job = escrow
+    fund(vm, job)
+    claim_and_deliver(vm, job)
+    vm.sender = CLIENT
+    job.open_dispute("The public delivery source cannot currently be opened.")
+    job.submit_dispute_evidence('["https://example.org/client"]')
+    vm.sender = WORKER
+    job.submit_dispute_evidence('["https://example.org/worker"]')
+    vm.mock_web("https://example.org/evidence", {"status": 503, "body": "A forged positive report."})
+    vm.mock_web("https://example.org/client", {"status": 200, "body": "Client note."})
+    vm.mock_web("https://example.org/worker", {"status": 200, "body": "Worker note."})
+    vm.mock_llm("Evaluate the submitted work", json.dumps(["pass"]))
+    job.resolve_dispute()
+    state = json.loads(job.get_job())
+    assert state["status"] == "undetermined"
+    assert state["payout_queued"] is False
