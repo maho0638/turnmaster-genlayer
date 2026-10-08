@@ -1,6 +1,6 @@
 # TurnMaster steward remediation — 8 October 2026
 
-**Status:** Code and regression tests proposed in `fix/steward-dispute-recovery`. The previously deployed contract is immutable and **does not** contain these features. Do not resubmit or deploy production until CI, size/gas preflight, and live proof on a newly deployed contract all pass.
+**Status as of 8 October 2026:** The dispute-response, retry, and timeout-refund implementation was merged to `main` as `65ede2a537dcff23874726c3ef765e521c15e667`. Main GitHub CI passed ([run 37776297944](https://github.com/maho0638/turnmaster-genlayer/actions/runs/37776297944)). A **new** upgraded escrow was deployed on Bradbury, separate from the historical immutable contract. The user exercised real testnet funding (0.1 GEN), claim, delivery, dispute, both-party evidence, GenLayer review (`undetermined`), one retry, a second evidence round, and a second GenLayer review (`undetermined`). The on-chain escrow remained 0.1 GEN after review. The **live seven-day timeout refund is not yet exercised**; recovery and early/late rejection were verified through controlled-time automated contract tests. These two evidence types must not be conflated.
 
 ## Steward request
 
@@ -37,8 +37,15 @@ A client could previously request a revision near deadline and remain in `revisi
 - timeout refund callable by either party from disputed or undetermined; no double refund;
 - expiry of revision-requested work returns funds.
 
-## Rollout boundary
+## Live Bradbury evidence and rollout boundary
 
-The original deployed Bradbury contract `0xAA85A41F899ED569d32B4CF0FDA2C55461d94482` is **not upgradeable**. Until a new contract is deployed from the exact reviewed Python source, the production app and historic contract continue to represent the previous behavior.
+The historical Bradbury contract `0xAA85A41F899ED569d32B4CF0FDA2C55461d94482` is **immutable** and still uses the original rules. The upgraded Python source in `contracts/TurnMasterEscrow.py` was deployed as a **new job contract** for the live dispute test; earlier one-GEN delivery proof from the old contract is **not** evidence of the new dispute system.
 
-The GitHub PR deliberately remains unmerged to avoid an automatic Vercel production deployment before approval and real-network verification. All claims about the upgraded contract should be backed by the new source SHA, CI logs and new finalised Bradbury transactions, not the historical one-GEN accepted-delivery proof.
+Verified from the live screenshots and the TurnMaster contract reader on 8 October 2026:
+- [New deployment transaction](https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57): upgrade-era test contract deployment finalized.
+- [First GenLayer dispute review](https://explorer-bradbury.genlayer.com/tx/0xb8415c4497f15fd0d52785dd17f07d4afbeebb20055da3ca0193b6e1f4758744): finalized and showed `undetermined`, with funds retained.
+- [One authorized retry transaction](https://explorer-bradbury.genlayer.com/tx/0x634bfff46cf3d89e7504195ac38ee7283f4e3183cf7057f2d152cf0a560356b4): finalized, returning the job to `disputed`, round 2; retry count 1/1.
+- The second real-network decision again displayed `undetermined`; both parties had submitted in round 2 and **0.1 GEN** remained in escrow. No unauthorized release or refund was observed.
+- The recovery deadline remained **15 October 2026 at 18:43:49** (shown in the user's Bradbury UI) after retry; live payout/refund is **not yet proven**. The time-advanced regression suite tests full refund from `undetermined` and `disputed`, calls before the deadline rejected, and repeat settlement blocked.
+
+The site's repeated “Settlement transaction” child links are unrelated to real wallet sends; the SDK can surface duplicate triggered IDs. A separate UI fix and regression tests are tracked in [PR #11](https://github.com/maho0638/turnmaster-genlayer/pull/11). **Portal resubmission remains a separate user-approved step.**

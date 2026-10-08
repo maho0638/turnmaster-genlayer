@@ -3,6 +3,7 @@ import { testnetBradbury } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus, type CalldataEncodable, type DecodedDeployData, type TransactionHash } from "genlayer-js/types";
 import { isAddress, parseEther, type Address } from "viem";
 import { createGenLayerWalletProvider } from "@/lib/genlayer-wallet-provider.mjs";
+import { normalizeTriggeredTransactionIds } from "@/lib/transaction-references.mjs";
 
 export type Eip1193Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -142,7 +143,7 @@ export async function finalizedTransactionState(hash: string): Promise<"success"
 
 async function transactionChildren(client: ReturnType<typeof readClient>, hash: TransactionHash): Promise<string[]> {
   try {
-    return await client.getTriggeredTransactionIds({ hash });
+    return normalizeTriggeredTransactionIds(hash, await client.getTriggeredTransactionIds({ hash }));
   } catch {
     return [];
   }
