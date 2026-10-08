@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { testnetBradbury } from "genlayer-js/chains";
+import { normalizeTriggeredTransactionIds } from "../lib/transaction-references.mjs";
 import {
   BRADBURY_CHAIN_EXPLORER_URL,
   BRADBURY_CHAIN_ID,
@@ -85,4 +86,23 @@ test("address input requires a 20-byte hexadecimal EVM address", () => {
   assert.equal(isEvmAddress("0x1111111111111111111111111111111111111111"), true);
   assert.equal(isEvmAddress("0x111"), false);
   assert.equal(isEvmAddress("1111111111111111111111111111111111111111"), false);
+});
+
+test("triggered transaction links de-duplicate case-insensitively and omit parent or invalid IDs", () => {
+  const parent = `0x${"1".repeat(64)}`;
+  const first = `0x${"a".repeat(64)}`;
+  const second = `0x${"b".repeat(64)}`;
+  const uppercaseFirst = `0x${"A".repeat(64)}`;
+  assert.deepEqual(
+    normalizeTriggeredTransactionIds(parent, [parent, first, uppercaseFirst, second, first, "", "0x123", null]),
+    [first, second],
+  );
+});
+
+test("triggered transaction list remains compact for repeated SDK references", () => {
+  const parent = `0x${"1".repeat(64)}`;
+  const child = `0x${"e".repeat(64)}`;
+  assert.deepEqual(normalizeTriggeredTransactionIds(parent, Array(500).fill(child)), [child]);
+  assert.deepEqual(normalizeTriggeredTransactionIds(parent, []), []);
+  assert.deepEqual(normalizeTriggeredTransactionIds(parent, undefined), []);
 });
