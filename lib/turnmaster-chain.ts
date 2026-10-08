@@ -28,6 +28,17 @@ export type OnchainJob = {
   payout_queued: boolean;
   delivery?: { description: string; evidence_urls: string[] };
   escrow_wei?: string;
+  dispute?: {
+    reason: string;
+    evidence_deadline: number;
+    recovery_deadline: number;
+    client_responded: boolean;
+    worker_responded: boolean;
+    retry_count: number;
+    round: number;
+    client_evidence_urls: string[];
+    worker_evidence_urls: string[];
+  };
 };
 
 export type TxResult = {

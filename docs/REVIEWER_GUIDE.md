@@ -11,7 +11,9 @@ TurnMaster is a GenLayer-native job escrow and dispute-resolution workflow on Br
 5. Fund the job from the client wallet with exactly the agreed reward.
 6. From a different wallet, claim the job and submit a delivery description plus public HTTPS evidence.
 7. From the client wallet, either accept the delivery, request a revision, or open a dispute. During a dispute, either party can add evidence.
-8. Run the GenLayer review. Inspect the stored decision report, per-criterion verdicts, contract state, Explorer transaction, and any triggered settlement transaction.
+8. In an upgraded contract, verify review fails if only one party submitted evidence before the 48-hour deadline. It succeeds after both responded or after that deadline.
+9. For a mixed fail/unverifiable result, verify no immediate settlement; then check one permitted retry and the fixed 7-day refund method.
+10. Inspect the decision report, contract state, Explorer transaction, and any settlement transaction. See `docs/STEWARD_REMEDIATION_2026_10_08.md`.
 
 ## Expected result
 
@@ -20,7 +22,7 @@ A successful job ends with a Bradbury contract that can be reopened by address a
 For a disputed job:
 - every criterion `pass` → release to worker;
 - at least one verified `fail` with no unverifiable criterion → refund client;
-- missing, ambiguous, contradictory, inaccessible or malformed evidence → `undetermined`, no payout.
+- missing, ambiguous, contradictory, inaccessible or malformed evidence → `undetermined`, no immediate payout. The updated contract offers one retry, then a final refund recovery after seven days.
 
 ## GenLayer-specific behavior
 
@@ -36,6 +38,10 @@ The Intelligent Contract retrieves submitted public evidence with `gl.nondet.web
 - Architecture: `docs/ARCHITECTURE.md`
 - Security model: `docs/SECURITY_MODEL.md`
 - CI: https://github.com/maho0638/turnmaster-genlayer/actions
+
+## Upgraded contract release status
+
+The stewardship remediation is on a review branch until passing all automated tests and an independent on-chain proof. The **existing production/live contract below is legacy** and does not enforce the new dispute response or recovery paths.
 
 ## Verified live deployment
 

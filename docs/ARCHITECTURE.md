@@ -40,9 +40,16 @@ For disputes, the contract:
 From `delivered`:
 - direct client acceptance → `resolved`;
 - revision request → `revision_requested → delivered`;
-- dispute → `disputed → resolved | undetermined`.
+- dispute → `disputed` (48h two-party evidence response period) → `resolved | undetermined`.
+- `undetermined` → one bounded `retry_dispute` → `disputed`, without moving the original 7-day recovery deadline.
+- `disputed | undetermined` after 7 days → `refund_after_dispute_timeout` → `resolved` (100% to client; either party may trigger).
+- `revision_requested` after job deadline → `refund_after_deadline` → `resolved`.
 
 An unfunded job can be cancelled. A funded/claimed but undelivered job can be refunded by the client after the deadline.
+
+## Enforceable dispute evidence timing
+
+Opening a dispute records immutable first-dispute recovery and round-specific evidence deadlines. Resolution is blocked while only one party responded and the response window is still active. New evidence is rejected after the evidence deadline; absence cannot stall the fixed seven-day recovery fallback. HTTP error evidence becomes unverifiable.
 
 ## Trust boundaries
 

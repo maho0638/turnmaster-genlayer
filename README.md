@@ -49,7 +49,7 @@ The integration uses the stable SDK's Bradbury preset and methods for contract d
 
 `contracts/TurnMasterEscrow.py` implements a single milestone and immutable job terms per deployment. It checks positive reward, nonempty and sufficiently specific criteria, valid deadline, exact client funding, role authorization, delivery and evidence shape, and one settlement. Release commission is configured in basis points at deployment. The contract queues transfers through GenLayer's EVM recipient interface. The app does not claim those transfers were tested on a live network.
 
-For disputes, the contract retrieves the public evidence URLs and asks GenLayer to evaluate each frozen criterion. If evidence cannot be retrieved, is empty, or the output is unusable, it records `undetermined` and queues no payout. Resolution requires one of the job's parties. A successful release pays the worker less the configured fee; a refund pays the client without a fee. A second settlement attempt is rejected.
+For disputes, the contract retrieves the public evidence URLs and asks GenLayer to evaluate each frozen criterion. If evidence cannot be retrieved, responds with HTTP 4xx/5xx, is empty, or the output is unusable, it records `undetermined` and queues no immediate payout. Upgraded contracts permit one retry and eventually a fixed-time full refund. Resolution requires one of the job's parties. A successful release pays the worker less the configured fee; a refund pays the client without a fee. A second settlement attempt is rejected.
 
 ## Tests
 
@@ -96,7 +96,7 @@ The reviewer materials are intentionally evidence-first: they distinguish verifi
 - A funded compatible wallet and browser wallet were not available for the end-to-end Bradbury flow. Transaction behavior, protocol fees, child transfer finalization, and Explorer display need live testnet verification.
 - Job records created from the app are not indexed or persisted centrally. A contract address is required to import the job after refreshing the page.
 - The stable app interface uses public URLs for evidence and has no private-document upload or storage feature.
-- A dispute that becomes `undetermined` has no retry or appeal flow. Funds remain in escrow; a recovery procedure is not implemented.
+- In the **original deployed V1**, an undetermined dispute has no recovery. The new `fix/steward-dispute-recovery` branch adds a 48-hour evidence response rule, one retry, and a fixed seven-day refund. These only apply once **new** contracts are deployed; the historic production contract is immutable.
 - Non-zero release commission is unavailable until a valid fee recipient is configured in the deployment environment. Zero-fee jobs are allowed.
 - Browser-based desktop/mobile, keyboard, assistive-technology, and WebMCP runtime checks have not been completed; see the QA report.
 
@@ -111,3 +111,8 @@ A real compact-contract deployment is finalized on Bradbury:
 - Shareable app view: https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
 
 CI additionally runs GenVM contract lint, direct contract tests, live RPC/preflight checks, reviewer/project-proof route smoke tests, and the frontend production build.
+
+
+## Steward remediation (October 8, 2026)
+
+GenLayer requested stronger dispute rights and guaranteed escrow recovery. The proposed contract on `fix/steward-dispute-recovery` enforces both-party evidence responses **or** a 48-hour evidence deadline before resolution, at most one retry of an inconclusive review, and a hard seven-day timeout after the initial dispute that permits **either party** to trigger a full client refund. The previously deployed contract cannot be upgraded in place. See [steward remediation and regression matrix](docs/STEWARD_REMEDIATION_2026_10_08.md). Until a new deployed proof passes, the Portal must not be resubmitted with claims that the legacy contract implements the new rules.
