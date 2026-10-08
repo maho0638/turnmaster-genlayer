@@ -228,7 +228,10 @@ class TurnMasterEscrow(gl.Contract):
             sources = []
             try:
                 for url in urls:
-                    body = gl.nondet.web.get(url).body.decode("utf-8", errors="replace")[:4000]
+                    response = gl.nondet.web.get(url)
+                    if response.status_code >= 400:
+                        return json.dumps(["unverifiable"] * len(criteria))
+                    body = response.body.decode("utf-8", errors="replace")[:4000]
                     if not body.strip():
                         return json.dumps(["unverifiable"] * len(criteria))
                     sources.append({"url": url, "content": body})
@@ -310,7 +313,7 @@ class TurnMasterEscrow(gl.Contract):
 
     @gl.public.write
     def refund_after_deadline(self):
-        if gl.message.sender_address != self.client or self.status not in ("funded", "claimed"):
+        if gl.message.sender_address != self.client or self.status not in ("funded", "claimed", "revision_requested"):
             raise gl.vm.UserError("Cannot refund")
         if int(datetime.now(timezone.utc).timestamp()) <= int(self.deadline):
             raise gl.vm.UserError("Deadline active")
