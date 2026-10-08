@@ -152,7 +152,7 @@ export function ContractWorkflow({ contractAddress, walletAddress, provider, rpc
     if (recoveryWindowOver) availableActions.push("recover");
     else if (dispute.retry_count < 1 && now + 48 * 60 * 60 < dispute.recovery_deadline) availableActions.push("retry");
   }
-  if ((job.status === "funded" || job.status === "claimed") && isClient && deadlinePassed) availableActions.push("refund");
+  if ((job.status === "funded" || job.status === "claimed" || job.status === "revision_requested") && isClient && deadlinePassed) availableActions.push("refund");
 
   const startAction = (next: Action) => {
     setError("");
