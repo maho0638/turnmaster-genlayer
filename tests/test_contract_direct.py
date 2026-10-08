@@ -401,3 +401,20 @@ def test_recovery_of_entire_escrow_from_inconclusive_dispute(escrow, from_state)
     assert int(result["reward_wei"]) == REWARD
     with pytest.raises(Exception):
         job.refund_after_dispute_timeout()
+
+
+def test_expired_revision_request_refunds_client(escrow):
+    vm, job = escrow
+    fund(vm, job)
+    claim_and_deliver(vm, job)
+    vm.sender = CLIENT
+    job.request_revision("Worker must provide a second link to the test report.")
+    _advance(vm, json.loads(job.get_job())["deadline"] + 1)
+    vm.sender = WORKER
+    with pytest.raises(Exception):
+        job.submit_delivery("Updated work is ready, see the public report.", '["https://example.org/evidence"]')
+    vm.sender = CLIENT
+    job.refund_after_deadline()
+    state = json.loads(job.get_job())
+    assert state["status"] == "resolved"
+    assert json.loads(state["decision"])["outcome"] == "deadline_missed"
