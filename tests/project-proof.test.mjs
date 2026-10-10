@@ -226,3 +226,18 @@ test("Bradbury RPC repair button only appears for an actual network or RPC probl
   assert.ok(page.includes('walletAddress && (wrongNetwork || walletBalanceError || networkRepairBusy)'));
   assert.ok(page.includes('"Fix Bradbury RPC"'));
 });
+
+test("steward can click Deploy even without a funded wallet, with safe inline guidance", () => {
+  const page = read("app/page.tsx");
+  const css = read("app/globals.css");
+  assert.ok(page.includes('onClick={createOnchain} disabled={chainBusy}'));
+  assert.ok(page.includes('deployReadiness.kind !== "ready"'));
+  assert.ok(page.includes('if (!walletAddress || !walletProvider)'));
+  assert.ok(page.includes('if (wrongNetwork)'));
+  assert.ok(page.includes('if (Number(walletBalance) <= 0)'));
+  assert.ok(page.includes('role="status" aria-live="polite"'));
+  assert.ok(page.includes('onClick={connectWallet}>Connect wallet'));
+  assert.ok(page.includes('href="https://testnet-faucet.genlayer.foundation/"'));
+  assert.ok(page.includes('Inspect a verified on-chain job'));
+  assert.ok(css.includes('.deploy-readiness-blocked'));
+});
