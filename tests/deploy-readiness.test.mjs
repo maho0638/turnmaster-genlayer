@@ -20,7 +20,7 @@ test("missing wallet is explained instead of silently disabling the button", () 
   const result = getDeployReadiness({ ...base, walletConnected: false });
   assert.equal(result.kind, "wallet");
   assert.match(result.message, /connect a wallet/i);
-  assert.match(result.message, /browser-only draft/i);
+  assert.match(result.message, /verified by reading Bradbury contracts/i);
 });
 
 test("wrong network remains blocked before wallet approval", () => {
