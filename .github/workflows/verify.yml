@@ -36,6 +36,7 @@ jobs:
       - run: npm run test:registry
       - run: npm run test:contract-proof
       - run: npm run test:live-rpc
+      - run: npm run test:live-board-rpc
       - run: npm run test:deploy-preflight
       - run: npm run build:vercel
       - name: Smoke-test built Next.js site
