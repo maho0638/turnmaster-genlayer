@@ -274,3 +274,13 @@ body{background:#020b18;color:#eaf2ff}
   word-break:break-all!important;
   white-space:normal!important;
 }
+
+/* Steward deployment usability: interactive prerequisite guidance inside the modal. */
+.deploy-readiness{display:grid;gap:7px;padding:12px 14px;border:1px solid #365a77;border-radius:10px;background:#102a44;color:#d9eafb;font-size:12px;line-height:1.5}
+.deploy-readiness strong{font-size:12px;letter-spacing:.02em;color:#f6faff}
+.deploy-readiness-ready{border-color:#237363;background:#10382f}
+.deploy-readiness-blocked{border-color:#846135;background:#302515}
+.deploy-assist-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.deploy-assist-actions a,.deploy-assist-actions button{display:inline-flex;align-items:center;padding:8px 10px;border:1px solid #53718a;border-radius:8px;background:#133552;color:#eff8ff!important;font-size:12px;text-decoration:none;cursor:pointer}
+.deploy-assist-actions a:hover,.deploy-assist-actions button:hover{background:#23587d;border-color:#77b3e2}
+.deploy-assist-actions button:focus-visible,.deploy-assist-actions a:focus-visible{outline:2px solid #f5bc56;outline-offset:2px}

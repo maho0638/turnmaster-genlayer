@@ -35,8 +35,8 @@ TurnMaster is testnet software. It is not legal arbitration and must not be used
 ## Transaction safety
 
 - Every write requires explicit wallet approval.
-- The app verifies Bradbury chain ID 4221 before enabling writes.
-- Native Bradbury GEN is checked separately before deployment.
+- The app verifies Bradbury chain ID 4221 before broadcasting writes. The Deploy button may be clicked without a wallet solely to display an actionable error; it never skips on-chain checks.
+- Native Bradbury GEN is checked separately before any deployment is broadcast. A disconnected, wrong-network, or unfunded reviewer can inspect an existing contract or save a browser-only draft without signing.
 - A submitted-but-unverified transaction hash is stored in session storage and blocks duplicate writes until the user checks Explorer.
 - Deployment, funding and later contract actions are separate transactions so a deployment cannot silently transfer the job reward.
 
@@ -51,5 +51,5 @@ TurnMaster is testnet software. It is not legal arbitration and must not be used
 
 - Public web evidence can change after submission; TurnMaster currently records URLs, not immutable content archives.
 - In the new contract revision, `undetermined` has one bounded retry and a fixed 7-day full refund recovery path. Previous on-chain deployments are immutable and do not inherit this rule.
-- A signed compact-contract Bradbury deployment is finalized; the remaining live gap is exercising the full multi-wallet fund → claim → deliver → review → settle lifecycle on that build.
+- A new upgraded Bradbury contract has a finalized deployment, funding, claim, delivery, two-party dispute evidence, one retry, and two inconclusive consensus reviews. The remaining live gap is the **seven-day full-refund transition**; controlled-time direct tests cover it, but no signed live timeout refund has completed.
 - Testnet validator/model behavior is external infrastructure and can change independently of the app.

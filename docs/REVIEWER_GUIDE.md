@@ -1,55 +1,54 @@
-# TurnMaster reviewer guide
+# TurnMaster reviewer guide — 10 October 2026
 
-TurnMaster is a GenLayer-native job escrow and dispute-resolution workflow on Bradbury Testnet (chain 4221). The fastest public overview is `/reviewer` on the production site.
+TurnMaster is an escrow and evidence-review workflow on **GenLayer Bradbury Testnet (chain 4221)**. It does not support real funds. Start at https://turnmaster-genlayer.vercel.app or the read-only https://turnmaster-genlayer.vercel.app/reviewer page.
 
-## What to verify
+## Steward follow-up: "Deploy terms on Bradbury" does not click
 
-1. Open `https://turnmaster-genlayer.vercel.app` and confirm the app identifies Bradbury Testnet / chain 4221.
-2. Open **Create a job** and enter a future deadline, reward, concrete delivery definition, and at least one measurable acceptance criterion. Use a 0% release fee unless a fee recipient is configured.
-3. Connect an EIP-1193 wallet. TurnMaster must verify native Bradbury GEN before deployment is enabled. The app never requests a private key or seed phrase.
-4. Deploy the frozen terms. Deployment sends no job reward; the reward is transferred later through **Fund**.
-5. Fund the job from the client wallet with exactly the agreed reward.
-6. From a different wallet, claim the job and submit a delivery description plus public HTTPS evidence.
-7. From the client wallet, either accept the delivery, request a revision, or open a dispute. During a dispute, either party can add evidence.
-8. In an upgraded contract, verify review fails if only one party submitted evidence before the 48-hour deadline. It succeeds after both responded or after that deadline.
-9. For a mixed fail/unverifiable result, verify no immediate settlement; then check one permitted retry and the fixed 7-day refund method.
-10. Inspect the decision report, contract state, Explorer transaction, and any settlement transaction. See `docs/STEWARD_REMEDIATION_2026_10_08.md`.
+This control used to have a hard `disabled` condition whenever the browser had no connected wallet, had not yet verified native Bradbury GEN, showed an RPC problem, had a pending deployment, or lacked a configured recipient for non-zero release fees. An unfamiliar reviewer therefore saw a non-interactive button without a clear way forward.
 
-## Expected result
+**Fixed behavior in the updated web frontend:** the **Deploy terms on Bradbury** button stays clickable except while an operation is already in progress. Clicking it without prerequisites does **not** broadcast a transaction; it displays the specific missing condition. The Create a job dialog also includes contextual actions:
+- **Connect wallet** when disconnected.
+- **Fix Bradbury RPC** if network or balance checks fail.
+- **Official GEN testnet faucet** if the wallet lacks native testnet GEN.
+- **Set fee to 0%** if there is no release fee recipient.
+- **View a finalized Bradbury deployment** for reviewers without an eligible funded wallet.
+- **Add session draft** for a no-wallet, clearly non-on-chain workflow.
 
-A successful job ends with a Bradbury contract that can be reopened by address and re-read without trusting the frontend. Its immutable job terms, delivery evidence, decision report, escrow state and terminal status must be visible.
+Important security boundary: the clickability fix **does not bypass** checks inside the deployment handler. A real deployment still requires a valid completed form, authorized wallet, chain 4221, verifiable positive native Bradbury GEN, no unresolved previous deployment, valid release-fee configuration, and explicit wallet approval.
 
-For a disputed job:
-- every criterion `pass` → release to worker;
-- at least one verified `fail` with no unverifiable criterion → refund client;
-- missing, ambiguous, contradictory, inaccessible or malformed evidence → `undetermined`, no immediate payout. The updated contract offers one retry, then a final refund recovery after seven days.
+## Quick reproduction / review
 
-## GenLayer-specific behavior
+1. Open https://turnmaster-genlayer.vercel.app in a fresh browser without a wallet connected.
+2. Select **Create a job**; confirm **Deploy terms on Bradbury** is clickable, not greyed out.
+3. Click Deploy. Observe a clear **Connect wallet** explanation. **No transaction is sent.**
+4. Click **Connect wallet**, grant access, and verify Bradbury chain 4221 using the official RPC `https://rpc-bradbury.genlayer.com`.
+5. If the wallet has no native GEN, see the inline explanation and official faucet link. Alternatively select **Add session draft** or **View a finalized Bradbury deployment**; these do not deploy a contract.
+6. With a funded wallet, enter valid job terms (title 4+ characters, description 20+, deliverable 8+, one criterion 18+, future deadline, reward >0, release fee 0%) and click Deploy.
+7. Read the wallet's fee and network information before approving. **The job reward is not transferred during deployment**; funding is a separate user-approved action.
+8. After finalization, open the live contract and review immutable criteria, fund/claim/deliver/dispute actions, the audit receipt and Explorer.
 
-The Intelligent Contract retrieves submitted public evidence with `gl.nondet.web.get(...)` and asks validators to agree on the ordered criterion verdicts with `gl.eq_principle.prompt_comparative(...)`. The model is not used as a chatbot; its output is constrained by deterministic contract checks and a conservative no-payout fallback.
+The automated deploy-readiness regression suite covers disconnected wallet, wrong chain, unreachable RPC, zero native balance, unverified balance, pending transaction, fee policy, and the ready path. Live wallet approval must be performed by the reviewer; the repository cannot sign on their behalf.
 
-## Public proof
+## Current verified on-chain evidence
 
-- Production: https://turnmaster-genlayer.vercel.app
-- Reviewer proof: https://turnmaster-genlayer.vercel.app/reviewer
-- Repository: https://github.com/maho0638/turnmaster-genlayer
-- Contract: `contracts/TurnMasterEscrow.py`
-- QA: `QA_REPORT.md`
-- Architecture: `docs/ARCHITECTURE.md`
-- Security model: `docs/SECURITY_MODEL.md`
+- **Upgraded live contract:** use the verified full contract address from the GenLayer Portal submission or the wallet-confirmed deploy receipt. Do not reconstruct it from the shortened UI label.
+- **Upgraded deployment:** https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57
+- **First inconclusive review:** https://explorer-bradbury.genlayer.com/tx/0xb8415c4497f15fd0d52785dd17f07d4afbeebb20055da3ca0193b6e1f4758744
+- **Retry:** https://explorer-bradbury.genlayer.com/tx/0x634bfff46cf3d89e7504195ac38ee7283f4e3183cf7057f2d152cf0a560356b4
+- **Old/legacy contract (cannot be upgraded):** https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
+
+The upgraded job had **0.1 test GEN in escrow**, two finalized `undetermined` decisions, evidence submitted by both parties, and one successful retry. An undetermined verdict did not release the funds; the recovery deadline remained unchanged.
+
+## Honest limits
+
+The **seven-day timeout refund** and early one-sided resolution rejections were proven in **controlled-time direct contract tests**, not by waiting seven real days and signing a live refund. The testnet escrow still awaiting that deadline must not be misrepresented as already refunded.
+
+Live signing, testnet GEN acquisition and chain configuration remain external prerequisites for *new* deployments. A read-only on-chain proof or browser session draft cannot replace a new signed deployment. CI results prove code and mock-time recovery paths, not an external reviewer's funded-wallet availability.
+
+## Further links
+
+- Source: https://github.com/maho0638/turnmaster-genlayer/blob/main/contracts/TurnMasterEscrow.py
+- Tests: https://github.com/maho0638/turnmaster-genlayer/blob/main/tests/test_contract_direct.py
 - CI: https://github.com/maho0638/turnmaster-genlayer/actions
-
-## Upgraded contract release status
-
-The stewardship remediation is on a review branch until passing all automated tests and an independent on-chain proof. The **existing production/live contract below is legacy** and does not enforce the new dispute response or recovery paths.
-
-## Verified live deployment
-
-- Contract: https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
-- Deployment transaction: https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403
-- Shareable app view: https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
-- Consensus state observed after the finalization window: FINALIZED.
-
-## Honest current limit
-
-The compact contract has a successful user-signed finalized Bradbury deployment. The remaining end-to-end gap is the complete multi-wallet lifecycle on this build: fund → claim → deliver → dispute/accept → settle. The project does not claim that later lifecycle has already been completed live.
+- Steward fix report: https://github.com/maho0638/turnmaster-genlayer/blob/main/docs/STEWARD_REMEDIATION_2026_10_08.md
+- Network documentation: https://docs.genlayer.com/developers/networks
