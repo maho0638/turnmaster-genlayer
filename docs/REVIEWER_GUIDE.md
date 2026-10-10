@@ -11,7 +11,7 @@ This control used to have a hard `disabled` condition whenever the browser had n
 - **Fix Bradbury RPC** if network or balance checks fail.
 - **Official GEN testnet faucet** if the wallet lacks native testnet GEN.
 - **Set fee to 0%** if there is no release fee recipient.
-- **Inspect a verified on-chain job** for reviewers without an eligible funded wallet.
+- **View a finalized Bradbury deployment** for reviewers without an eligible funded wallet.
 - **Add session draft** for a no-wallet, clearly non-on-chain workflow.
 
 Important security boundary: the clickability fix **does not bypass** checks inside the deployment handler. A real deployment still requires a valid completed form, authorized wallet, chain 4221, verifiable positive native Bradbury GEN, no unresolved previous deployment, valid release-fee configuration, and explicit wallet approval.
@@ -22,7 +22,7 @@ Important security boundary: the clickability fix **does not bypass** checks ins
 2. Select **Create a job**; confirm **Deploy terms on Bradbury** is clickable, not greyed out.
 3. Click Deploy. Observe a clear **Connect wallet** explanation. **No transaction is sent.**
 4. Click **Connect wallet**, grant access, and verify Bradbury chain 4221 using the official RPC `https://rpc-bradbury.genlayer.com`.
-5. If the wallet has no native GEN, see the inline explanation and official faucet link. Alternatively select **Add session draft** or **Inspect a verified on-chain job**; these do not deploy a contract.
+5. If the wallet has no native GEN, see the inline explanation and official faucet link. Alternatively select **Add session draft** or **View a finalized Bradbury deployment**; these do not deploy a contract.
 6. With a funded wallet, enter valid job terms (title 4+ characters, description 20+, deliverable 8+, one criterion 18+, future deadline, reward >0, release fee 0%) and click Deploy.
 7. Read the wallet's fee and network information before approving. **The job reward is not transferred during deployment**; funding is a separate user-approved action.
 8. After finalization, open the live contract and review immutable criteria, fund/claim/deliver/dispute actions, the audit receipt and Explorer.
@@ -31,7 +31,7 @@ The automated deploy-readiness regression suite covers disconnected wallet, wron
 
 ## Current verified on-chain evidence
 
-- **Upgraded contract (new rules):** https://explorer-bradbury.genlayer.com/address/0x30D7B14756ED2b62f7f39F8240F8C0C3533950
+- **Upgraded live contract:** use the verified full contract address from the GenLayer Portal submission or the wallet-confirmed deploy receipt. Do not reconstruct it from the shortened UI label.
 - **Upgraded deployment:** https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57
 - **First inconclusive review:** https://explorer-bradbury.genlayer.com/tx/0xb8415c4497f15fd0d52785dd17f07d4afbeebb20055da3ca0193b6e1f4758744
 - **Retry:** https://explorer-bradbury.genlayer.com/tx/0x634bfff46cf3d89e7504195ac38ee7283f4e3183cf7057f2d152cf0a560356b4
