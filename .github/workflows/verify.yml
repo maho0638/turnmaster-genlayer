@@ -32,9 +32,11 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run test:network
       - run: npm run test:project-proof
+      - run: npm run test:real-board
       - run: npm run test:registry
       - run: npm run test:contract-proof
       - run: npm run test:live-rpc
+      - run: npm run test:live-board-rpc
       - run: npm run test:deploy-preflight
       - run: npm run build:vercel
       - name: Smoke-test built Next.js site

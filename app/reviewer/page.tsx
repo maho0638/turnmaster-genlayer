@@ -116,7 +116,7 @@ export default function ReviewerPage() {
       <section className={styles.section}>
         <div className={styles.sectionHeading}><span>06</span><div><p>REVIEW WALKTHROUGH</p><h2>Fastest way to verify the project</h2></div></div>
         <ol className={styles.reviewList}>
-          <li><b>Open the production app.</b> Confirm the header shows Bradbury Testnet / chain 4221 and inspect the sample board without connecting a wallet.</li>
+          <li><b>Open the production app.</b> Confirm the header shows Bradbury Testnet / chain 4221 and inspect jobs re-read from publicly verified Bradbury contracts without connecting a wallet.</li>
           <li><b>Open Create a job.</b> Enter a future deadline, a reward, a concrete deliverable and at least one measurable acceptance criterion. Keep release fee at 0% unless a fee recipient is configured.</li>
           <li><b>Test the Deploy button without a wallet.</b> The button is clickable and responds with a clear Connect wallet explanation; no transaction is broadcast.</li><li><b>Connect a test wallet.</b> Check Bradbury chain 4221 and native test GEN; the dialog explains RPC, faucet, or fee prerequisites when missing. No private key is requested.</li>
           <li><b>Deploy terms.</b> The wallet shows the network fee; the reward remains unfunded until the separate Fund action.</li>

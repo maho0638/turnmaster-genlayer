@@ -12,7 +12,7 @@ This control used to have a hard `disabled` condition whenever the browser had n
 - **Official GEN testnet faucet** if the wallet lacks native testnet GEN.
 - **Set fee to 0%** if there is no release fee recipient.
 - **View a finalized Bradbury deployment** for reviewers without an eligible funded wallet.
-- **Add session draft** for a no-wallet, clearly non-on-chain workflow.
+- **Open contract** for a wallet-free, read-only on-chain verification flow.
 
 Important security boundary: the clickability fix **does not bypass** checks inside the deployment handler. A real deployment still requires a valid completed form, authorized wallet, chain 4221, verifiable positive native Bradbury GEN, no unresolved previous deployment, valid release-fee configuration, and explicit wallet approval.
 
@@ -22,7 +22,7 @@ Important security boundary: the clickability fix **does not bypass** checks ins
 2. Select **Create a job**; confirm **Deploy terms on Bradbury** is clickable, not greyed out.
 3. Click Deploy. Observe a clear **Connect wallet** explanation. **No transaction is sent.**
 4. Click **Connect wallet**, grant access, and verify Bradbury chain 4221 using the official RPC `https://rpc-bradbury.genlayer.com`.
-5. If the wallet has no native GEN, see the inline explanation and official faucet link. Alternatively select **Add session draft** or **View a finalized Bradbury deployment**; these do not deploy a contract.
+5. If the wallet has no native GEN, see the inline explanation and official faucet link. Alternatively select **Open contract** or **View a finalized Bradbury deployment**; these do not deploy a contract.
 6. With a funded wallet, enter valid job terms (title 4+ characters, description 20+, deliverable 8+, one criterion 18+, future deadline, reward >0, release fee 0%) and click Deploy.
 7. Read the wallet's fee and network information before approving. **The job reward is not transferred during deployment**; funding is a separate user-approved action.
 8. After finalization, open the live contract and review immutable criteria, fund/claim/deliver/dispute actions, the audit receipt and Explorer.
@@ -52,3 +52,9 @@ Live signing, testnet GEN acquisition and chain configuration remain external pr
 - CI: https://github.com/maho0638/turnmaster-genlayer/actions
 - Steward fix report: https://github.com/maho0638/turnmaster-genlayer/blob/main/docs/STEWARD_REMEDIATION_2026_10_08.md
 - Network documentation: https://docs.genlayer.com/developers/networks
+
+## Steward follow-up: real data only
+
+As of the real-data remediation, the public dashboard no longer initializes with five illustrative jobs or permits session-only drafts to appear alongside blockchain work. A fresh browser discovers independently confirmed TurnMaster Bradbury addresses from `lib/public-contracts.mjs`; the addresses are pointers, NOT content. Every displayed title, reward, criteria, escrow balance, delivery and status is read using GenLayer `get_job()` directly from that deployed contract. Failed RPC reads display an error/empty state, not fabricated jobs. Visitors can import and inspect additional Bradbury contracts using **Open contract** without a wallet. The public registry is limited to known published contract addresses; it is not a general blockchain indexer for every new deployment. No wallet signature is required for read-only inspection.
+
+The steward's reported `wallet_getSnaps` error is not invoked by any TurnMaster application source file. We are treating it as an open wallet/provider integration reproduction issue, rather than claiming the on-chain or browser-wallet problem fixed without a reproducible trace.
