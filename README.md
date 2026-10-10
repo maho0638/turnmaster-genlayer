@@ -76,7 +76,7 @@ There is no shared on-chain board: retain the deployed contract address to re-op
 
 ## Reviewer proof and Portal-ready evidence
 
-For stewards and GenLayer Portal reviewers, the production build now includes a dedicated read-only proof surface at [turnmaster-genlayer.vercel.app/reviewer](https://turnmaster-genlayer.vercel.app/reviewer). It explains the real trust problem, the full contract lifecycle, the exact GenLayer consensus path, safety invariants, public artifacts, review steps, expected results, automated evidence, and the remaining signed end-to-end limitation.
+For stewards and GenLayer Portal reviewers, the production build now includes a dedicated read-only proof surface at [turnmaster-genlayer.vercel.app/reviewer](https://turnmaster-genlayer.vercel.app/reviewer). It explains the contract lifecycle, consensus path, safety invariants, public artifacts, wallet prerequisites, and test evidence. The seven-day live refund is still pending, while time-advanced direct contract tests cover recovery.
 
 Submission and technical evidence are kept with the source:
 
@@ -88,15 +88,15 @@ Submission and technical evidence are kept with the source:
 - [QA report](QA_REPORT.md)
 - [Public CI history](https://github.com/maho0638/turnmaster-genlayer/actions)
 
-The reviewer materials are intentionally evidence-first: they distinguish verified automation from the one remaining user-signed Bradbury lifecycle gap instead of presenting sample data as live chain proof.
+The reviewer materials distinguish genuine Bradbury transactions, controlled-time contract tests, and wallet prerequisites. In particular, the Deploy button is clickable even without a wallet but will not broadcast until chain, balance and authorization checks pass.
 
 ## Known limitations
 
-- No TurnMaster contract has been deployed from this repository build. There are no real contract addresses, transactions, balances, or Explorer records to show.
-- A funded compatible wallet and browser wallet were not available for the end-to-end Bradbury flow. Transaction behavior, protocol fees, child transfer finalization, and Explorer display need live testnet verification.
+- An upgraded TurnMasterEscrow deployment and two inconclusive dispute reviews were verified on Bradbury, including a funded 0.1 GEN escrow and one retry. See the steward remediation report for verified transaction references.
+- The seven-day live timeout refund has not been executed; its conditions and full recovery were tested using controlled-time direct GenVM tests. New deployments still require a connected, funded Bradbury wallet and explicit approval.
 - Job records created from the app are not indexed or persisted centrally. A contract address is required to import the job after refreshing the page.
 - The stable app interface uses public URLs for evidence and has no private-document upload or storage feature.
-- In the **original deployed V1**, an undetermined dispute has no recovery. The new `fix/steward-dispute-recovery` branch adds a 48-hour evidence response rule, one retry, and a fixed seven-day refund. These only apply once **new** contracts are deployed; the historic production contract is immutable.
+- The original deployed V1 is immutable and does not have undetermined-dispute recovery. The main branch now has the upgraded contract; newly deployed jobs use the 48-hour evidence-response rule, one retry, and fixed seven-day refund.
 - Non-zero release commission is unavailable until a valid fee recipient is configured in the deployment environment. Zero-fee jobs are allowed.
 - Browser-based desktop/mobile, keyboard, assistive-technology, and WebMCP runtime checks have not been completed; see the QA report.
 
@@ -113,6 +113,8 @@ A real compact-contract deployment is finalized on Bradbury:
 CI additionally runs GenVM contract lint, direct contract tests, live RPC/preflight checks, reviewer/project-proof route smoke tests, and the frontend production build.
 
 
-## Steward remediation (October 8, 2026)
+## Steward remediation and deployment UX (8–10 October 2026)
 
-GenLayer requested stronger dispute rights and guaranteed escrow recovery. The proposed contract on `fix/steward-dispute-recovery` enforces both-party evidence responses **or** a 48-hour evidence deadline before resolution, at most one retry of an inconclusive review, and a hard seven-day timeout after the initial dispute that permits **either party** to trigger a full client refund. The previously deployed contract cannot be upgraded in place. See [steward remediation and regression matrix](docs/STEWARD_REMEDIATION_2026_10_08.md). Until a new deployed proof passes, the Portal must not be resubmitted with claims that the legacy contract implements the new rules.
+The improved source was merged, and a new Bradbury job verified funding, claim, delivery, two inconclusive consensus reviews, one permitted retry, and preservation of 0.1 test GEN. The 48-hour evidence-response and seven-day client recovery rules passed direct contract tests; the live seven-day refund remains unexecuted. See [the remediation report](docs/STEWARD_REMEDIATION_2026_10_08.md).
+
+**10 October steward follow-up:** the **Deploy terms on Bradbury** button used to be hard-disabled when a wallet was disconnected, RPC or native GEN verification failed, or a non-zero release fee had no recipient. It now remains clickable to show an actionable reason and a direct connection/RPC/faucet/fee remedy. The underlying wallet, chain, fee and duplicate-transaction safeguards remain enforced. A reviewer can alternatively create a clearly browser-only draft or view a finalized Bradbury deployment without signing. See [the reviewer walkthrough](docs/REVIEWER_GUIDE.md).
