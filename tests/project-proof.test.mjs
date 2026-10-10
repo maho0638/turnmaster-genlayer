@@ -41,8 +41,8 @@ test("portal submission document contains every required reviewer field", () => 
 test("reviewer documentation states the final end-to-end limitation instead of overstating it", () => {
   const guide = read("docs/REVIEWER_GUIDE.md");
   const security = read("docs/SECURITY_MODEL.md");
-  assert.match(guide, /remaining end-to-end gap is the complete multi-wallet lifecycle/i);
-  assert.match(security, /remaining live gap is exercising the full multi-wallet/i);
+  assert.match(guide, /seven-day timeout refund/i);
+  assert.match(security, /remaining live gap is the \*\*seven-day full-refund transition\*\*/i);
 });
 
 test("transient information notices auto-dismiss", () => {
