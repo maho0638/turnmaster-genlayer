@@ -11,6 +11,6 @@ for (const address of PUBLIC_TURNMASTER_CONTRACTS) {
   assert.ok(typeof job.title === "string" && job.title.length >= 4, `No real job title at ${address}`);
   assert.ok(typeof job.status === "string", `No status at ${address}`);
   assert.ok(Array.isArray(job.acceptance_criteria) && job.acceptance_criteria.length > 0, `No contract criteria at ${address}`);
-  assert.ok(/^\\d+$/.test(String(job.reward_wei)), `No on-chain reward at ${address}`);
+  assert.ok(/^[0-9]+$/.test(String(job.reward_wei)), `No on-chain reward at ${address}`);
   console.log(`Verified Bradbury contract ${address}: ${job.status} · ${job.title}`);
 }
