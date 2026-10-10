@@ -32,7 +32,8 @@ const checks = [
 
 const artifacts = [
   ["Production app", "https://turnmaster-genlayer.vercel.app", "Open the public work board and wallet flow."],
-  ["Finalized Bradbury contract", "https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482", "Real TurnMasterEscrow deployment finalized on Bradbury."],
+  ["Updated escrow deployment (Oct 8)", "https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57", "Finalized contract deployment from the updated dispute-response and recovery implementation."],
+  ["Legacy V1 contract", "https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482", "Older immutable job, before dispute retry/recovery rules."],
   ["Finalized deploy transaction", "https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403", "Consensus journey and finalized deployment transaction."],
   ["GitHub repository", "https://github.com/maho0638/turnmaster-genlayer", "Complete source, tests, CI workflow and documentation."],
   ["Intelligent Contract", "https://github.com/maho0638/turnmaster-genlayer/blob/main/contracts/TurnMasterEscrow.py", "GenLayer escrow, evidence retrieval, consensus review and settlement logic."],
@@ -117,7 +118,7 @@ export default function ReviewerPage() {
         <ol className={styles.reviewList}>
           <li><b>Open the production app.</b> Confirm the header shows Bradbury Testnet / chain 4221 and inspect the sample board without connecting a wallet.</li>
           <li><b>Open Create a job.</b> Enter a future deadline, a reward, a concrete deliverable and at least one measurable acceptance criterion. Keep release fee at 0% unless a fee recipient is configured.</li>
-          <li><b>Connect a test wallet.</b> TurnMaster verifies native Bradbury GEN before enabling deployment and never asks for a private key.</li>
+          <li><b>Test the Deploy button without a wallet.</b> The button is clickable and responds with a clear Connect wallet explanation; no transaction is broadcast.</li><li><b>Connect a test wallet.</b> Check Bradbury chain 4221 and native test GEN; the dialog explains RPC, faucet, or fee prerequisites when missing. No private key is requested.</li>
           <li><b>Deploy terms.</b> The wallet shows the network fee; the reward remains unfunded until the separate Fund action.</li>
           <li><b>Fund and claim with the correct roles.</b> Client funds exactly the reward; a different wallet claims the job.</li>
           <li><b>Submit delivery evidence.</b> The worker records a delivery description and public HTTPS evidence links.</li>
@@ -131,7 +132,7 @@ export default function ReviewerPage() {
         <div className={styles.sectionHeading}><span>07</span><div><p>WHAT IS VERIFIED</p><h2>Automated evidence, with limits stated</h2></div></div>
         <div className={styles.twoCol}>
           <article className={styles.card}><h3>Automated checks</h3><ul><li>ESLint and TypeScript</li><li>Network and wallet-provider unit tests</li><li>Contract/public-source identity</li><li>GenVM contract lint</li><li>Live Bradbury RPC smoke test</li><li>No-broadcast live deployment preflight</li><li>Share-link and audit-receipt tests</li><li>Next.js production build + reviewer-route HTTP smoke</li><li>GenLayer direct-mode contract lifecycle tests</li></ul></article>
-          <article className={styles.card}><h3>Current honest limit</h3><p>The compact contract now has a real user-signed Bradbury deployment with FINALIZED consensus. The remaining gap is the complete signed multi-wallet lifecycle — fund → claim → deliver → dispute/accept → settle — on this deployed build. The QA report keeps that distinction explicit.</p></article>
+          <article className={styles.card}><h3>Current honest limit</h3><p>Real Bradbury testing completed an upgraded deployment, 0.1 GEN funding, claim, delivery, two-party dispute evidence, one retry, and two finalized Undetermined consensus decisions; the 0.1 GEN remained locked as required. The seven-day timeout refund was verified using controlled-time direct contract tests but has not yet been executed live. New deployments still require a funded Bradbury wallet and wallet approval.</p></article>
         </div>
       </section>
 
