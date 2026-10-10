@@ -22,7 +22,8 @@
     "test:project-proof": "node --test tests/project-proof.test.mjs",
     "test:registry": "node --test tests/job-registry.test.mjs",
     "test:contract-proof": "node --test tests/contract-proof.test.mjs",
-    "test:real-board": "node --test tests/real-board.test.mjs"
+    "test:real-board": "node --test tests/real-board.test.mjs",
+    "test:live-board-rpc": "node tests/live-board-rpc.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
