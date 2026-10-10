@@ -238,6 +238,6 @@ test("steward can click Deploy even without a funded wallet, with safe inline gu
   assert.ok(page.includes('role="status" aria-live="polite"'));
   assert.ok(page.includes('onClick={connectWallet}>Connect wallet'));
   assert.ok(page.includes('href="https://testnet-faucet.genlayer.foundation/"'));
-  assert.ok(page.includes('Inspect a verified on-chain job'));
+  assert.ok(page.includes('View a finalized Bradbury deployment'));
   assert.ok(css.includes('.deploy-readiness-blocked'));
 });
