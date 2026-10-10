@@ -26,7 +26,7 @@ const ContractWorkflow = dynamic(() => import("@/app/contract-workflow").then((m
 });
 
 type Status = "Open" | "Funded" | "Claimed" | "Delivered" | "Revision requested" | "In review" | "Undetermined" | "Resolved" | "Cancelled";
-type Job = { id: string; title: string; client: string; initials: string; color: string; category: string; reward: string; due: string; status: Status; criteria: string[]; evidence?: string[]; note?: string; sample: boolean; description?: string; deliveryDefinition?: string; proofType?: string; contractAddress?: string; chainJob?: OnchainJob; chainTx?: TxResult };
+type Job = { id: string; title: string; client: string; initials: string; color: string; category: string; reward: string; due: string; status: Status; criteria: string[]; evidence?: string[]; note?: string; description?: string; deliveryDefinition?: string; proofType?: string; contractAddress?: string; chainJob?: OnchainJob; chainTx?: TxResult };
 const statuses: ("All" | Status)[] = ["All", "Open", "Funded", "Claimed", "Delivered", "Revision requested", "In review", "Undetermined", "Resolved", "Cancelled"];
 const network = BRADBURY_WALLET_NETWORK;
 const networkChainId = BRADBURY_CHAIN_ID;
@@ -81,7 +81,6 @@ function jobFromChain(address: string, record: OnchainJob, tx?: TxResult): Job {
     criteria: record.acceptance_criteria,
     evidence: record.delivery?.evidence_urls,
     note: "Bradbury Testnet · verified contract read",
-    sample: false,
     description: record.description,
     deliveryDefinition: record.delivery_definition,
     proofType: record.proof_type,
@@ -578,7 +577,7 @@ export default function Home() {
         </div>
       </div>}
     </div> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
-      <div className="preview-banner"><span className="preview-dot" /><b>TESTNET PREVIEW</b><span>Sample records are illustrative · New contracts use Bradbury Testnet only</span><button aria-label="What does testnet preview mean?" onClick={() => setNotice("This is a public Bradbury testnet preview. Sample records are illustrative. Successfully deployed or opened contract addresses are remembered in this browser and re-read from Bradbury on reload; there is no shared cross-device index yet.")}><CircleHelp size={15} /></button></div>
+      <div className="preview-banner"><span className="preview-dot" /><b>TESTNET PREVIEW</b><span>Displayed work is read from verified GenLayer Bradbury contracts only</span><button aria-label="What does testnet preview mean?" onClick={() => setNotice("Publicly verified Bradbury contract addresses are loaded even on a fresh browser. New user-deployed contracts are remembered in the browser or can be loaded using Open contract. Only current on-chain contract data is displayed; no example jobs are generated.")}><CircleHelp size={15} /></button></div>
       <div className="content-wrap">
         <div className="page-heading premium-hero">
           <div className="hero-copy">
