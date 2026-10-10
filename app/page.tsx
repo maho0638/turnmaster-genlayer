@@ -112,7 +112,7 @@ export default function Home() {
   const [boardLoadState, setBoardLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [activeStatus, setActiveStatus] = useState<"All" | Status>("All");
   const [viewMode, setViewMode] = useState<"board" | "mine">("board");
-  const [selected, setSelected] = useState<Job | null>(null);
+  const [requestedJob, setSelected] = useState<Job | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [contractInput, setContractInput] = useState("");
@@ -186,7 +186,7 @@ export default function Home() {
     const remembered = loadContractAddresses(window.localStorage);
     const addresses = normalizeContractAddresses([...(isEvmAddress(shared) ? [shared] : []), ...remembered, ...PUBLIC_TURNMASTER_CONTRACTS]);
     if (isEvmAddress(shared)) rememberContractAddress(shared, window.localStorage);
-    if (addresses.length === 0) { setBoardLoadState("ready"); return; }
+    if (addresses.length === 0) return;
     let cancelled = false;
     void import("@/lib/turnmaster-chain")
       .then(async ({ readOnchainJob }) => {
@@ -343,9 +343,7 @@ export default function Home() {
       job.chainJob.client.toLowerCase() === connected || job.chainJob.worker.toLowerCase() === connected
     ));
   }, [jobs, viewMode, walletAddress]);
-  useEffect(() => {
-    setSelected((current) => current && scopedJobs.some((job) => job.contractAddress?.toLowerCase() === current.contractAddress?.toLowerCase()) ? current : (scopedJobs[0] ?? null));
-  }, [scopedJobs]);
+  const selected = requestedJob && scopedJobs.find((job) => job.contractAddress?.toLowerCase() === requestedJob.contractAddress?.toLowerCase()) || scopedJobs[0] || null;
   const filtered = useMemo(() => scopedJobs.filter((job) => (activeStatus === "All" || job.status === activeStatus) && `${job.title} ${job.client} ${job.category}`.toLowerCase().includes(query.toLowerCase())), [scopedJobs, activeStatus, query]);
   const liveJobs = scopedJobs.filter((job) => job.contractAddress);
   const escrowWei = liveJobs.reduce((total, job) => total + BigInt(job.chainJob?.escrow_wei ?? "0"), BigInt(0));
