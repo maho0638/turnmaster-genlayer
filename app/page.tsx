@@ -497,7 +497,7 @@ export default function Home() {
     const previous = jobs.find((item) => item.contractAddress?.toLowerCase() === address.toLowerCase());
     const updated = jobFromChain(address, record, tx ?? previous?.chainTx);
     setJobs((current) => current.map((item) => item.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : item));
-    setSelected((current) => current.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : current);
+    setSelected((current) => current?.contractAddress?.toLowerCase() === address.toLowerCase() ? updated : current);
   };
 
   const cancelWorkspaceAutoClose = () => {
