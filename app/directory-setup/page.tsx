@@ -32,7 +32,15 @@ export default function DirectorySetup() {
   const [message, setMessage] = useState("Bradbury ortak iş dizini kurulumu. Yalnızca testnet GEN ağ ücreti kullanılır.");
   const [hash, setHash] = useState("");
   const [directory, setDirectory] = useState("");
-  useEffect(() => { const frame = window.requestAnimationFrame(() => setHash(window.sessionStorage.getItem(PENDING_KEY) ?? "")); return () => window.cancelAnimationFrame(frame); }, []);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const pending = window.sessionStorage.getItem(PENDING_KEY) ?? "";
+      setHash(pending);
+      const previous = window.localStorage.getItem("turnmaster-directory-deployed-address") ?? "";
+      if (!pending && isContractAddress(previous)) setDirectory(previous);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const verify = async (client: ReturnType<typeof deployedClient>, transactionHash: TransactionHash) => {
     const receipt = await client.waitForTransactionReceipt({
