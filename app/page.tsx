@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   Activity, ArrowUpRight, Bell, BriefcaseBusiness,
   Check, ChevronDown, CircleAlert, CircleHelp, Clock3, Command, Copy, ExternalLink,
-  FileText, Filter, Gavel, LockKeyhole, Menu, Plus, RefreshCw,
+  FileText, Filter, Gavel, LockKeyhole, LogOut, Menu, Plus, RefreshCw,
   Search, Shield, Wallet, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -432,6 +432,21 @@ export default function Home() {
     }
   };
 
+  const disconnectWallet = () => {
+    // EIP-1193 has no standard disconnect method. Close TurnMaster's local
+    // session and remove its provider listeners; MetaMask site permission is separate.
+    walletSessionConfirmed.current = false;
+    setWalletAddress("");
+    setWalletProvider(null);
+    setWalletBalance(null);
+    setWalletBalanceError(false);
+    setWrongNetwork(false);
+    setNetworkRepairBusy(false);
+    setWalletMenuOpen(false);
+    setWalletMessage("");
+    setNotice("Disconnected from TurnMaster. To revoke site access, remove TurnMaster in MetaMask's Connected sites settings.");
+  };
+
   const connectWallet = async () => {
     setWalletMessage("");
     const provider = (window as Window & { ethereum?: Eip1193Provider }).ethereum;
@@ -686,6 +701,7 @@ export default function Home() {
           <button type="button" role="menuitem" onClick={() => void refreshWalletBalance()}><RefreshCw size={14}/>Refresh balance</button>
           <button type="button" role="menuitem" onClick={() => { void navigator.clipboard.writeText(walletAddress); setNotice("Wallet address copied."); }}><Copy size={14}/>Copy address</button>
           <a role="menuitem" href={explorerAddressUrl(walletAddress)} target="_blank" rel="noreferrer"><ExternalLink size={14}/>Open in Explorer</a>
+          <button type="button" role="menuitem" onClick={disconnectWallet}><LogOut size={14}/>Disconnect wallet</button>
         </div>
       </div>}
     </div> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
