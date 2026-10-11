@@ -22,6 +22,9 @@ test('mixed-case address duplicates do not resurrect stale rows', () => {
 test('unverified or addressless UI drafts are never retained', () => {
   assert.deepEqual(reconcileVerifiedJobs([{title:'fake browser draft'},job(A)],[],[A]),[]);
 });
+test('directory discovery failure removes old directory-only rows instead of showing stale state', () => {
+  assert.deepEqual(reconcileVerifiedJobs([job(A,'funded'),job(B,'claimed')],[job(C,'open')],[C],false),[job(C,'open')]);
+});
 test('board distinguishes ready, empty-error and partial real-chain responses', () => {
   assert.equal(classifyBoardRead(0,0),'ready');
   assert.equal(classifyBoardRead(2,0),'error');

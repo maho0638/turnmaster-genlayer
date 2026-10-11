@@ -158,7 +158,13 @@ export default function Home() {
           ...PUBLIC_TURNMASTER_CONTRACTS,
         ]);
         if (addresses.length === 0) {
-          if (!cancelled) setBoardLoadState(directoryReadFailed ? "partial" : "ready");
+          if (!cancelled) {
+            if (directoryReadFailed) {
+              setJobs((current) => reconcileVerifiedJobs(current, [], [], false));
+              setSelected(null);
+            }
+            setBoardLoadState(directoryReadFailed ? "partial" : "ready");
+          }
           return;
         }
         const { readOnchainJob } = await import("@/lib/turnmaster-chain");
@@ -183,7 +189,7 @@ export default function Home() {
           .map((result) => result.value);
         // Never leave stale (previously verified) rows visible after an RPC failure.
         // Preserve only new, concurrently added jobs not present in this read batch.
-        setJobs((current) => reconcileVerifiedJobs(current, live, addresses));
+        setJobs((current) => reconcileVerifiedJobs(current, live, addresses, !directoryReadFailed));
         if (live.length === 0) { setBoardLoadState("error"); setSelected(null); return; }
         setBoardLoadState(directoryReadFailed ? "partial" : classifyBoardRead(addresses.length, live.length));
         const sharedJob = isEvmAddress(shared) ? live.find((job) => job.contractAddress?.toLowerCase() === shared.toLowerCase()) : undefined;

@@ -39,7 +39,8 @@ test("real contracts are re-polled, without a Snap-only wallet dependency", () =
 });
 
 test("stale chain records are discarded on read failure and deploy hashes persist", () => {
-  assert.match(page, /reconcileVerifiedJobs\(current, live, addresses\)/);
+  assert.match(page, /reconcileVerifiedJobs\(current, live, addresses, !directoryReadFailed\)/);
+  assert.match(page, /reconcileVerifiedJobs\(current, \[\], \[\], false\)/);
   assert.match(page, /Bradbury contract read timed out/);
   assert.match(page, /if \(live.length === 0\) \{ setBoardLoadState\(\"error\"\); setSelected\(null\); return; \}/);
   const chainSource = readFileSync(new URL("../lib/turnmaster-chain.ts", import.meta.url), "utf8");

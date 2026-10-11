@@ -3,6 +3,73 @@ import json
 from genlayer import *
 
 PAGE_MAX = 100
+JOB_STATUSES = (
+    "open", "funded", "claimed", "delivered", "revision_requested",
+    "disputed", "undetermined", "resolved", "cancelled",
+)
+
+
+def _is_uint(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _is_text(value):
+    return isinstance(value, str)
+
+
+def _is_string_list(value):
+    return isinstance(value, list) and all(_is_text(item) for item in value)
+
+
+def _is_job_record(job):
+    if not isinstance(job, dict):
+        return False
+    required_text = (
+        "client", "worker", "title", "description", "delivery_definition",
+        "proof_type", "reward_wei", "status", "decision",
+    )
+    if any(not _is_text(job.get(key)) for key in required_text):
+        return False
+    if len(job["title"].strip()) < 4 or job["status"] not in JOB_STATUSES:
+        return False
+    try:
+        Address(job["client"])
+        Address(job["worker"])
+    except Exception:
+        return False
+    criteria = job.get("acceptance_criteria")
+    if not _is_string_list(criteria) or len(criteria) == 0:
+        return False
+    if not job["reward_wei"].isdigit() or not _is_uint(job.get("deadline")):
+        return False
+    commission = job.get("commission_bps")
+    if not _is_uint(commission) or commission > 10000:
+        return False
+    if not isinstance(job.get("funded"), bool) or not isinstance(job.get("payout_queued"), bool):
+        return False
+    if not _is_uint(job.get("revision_count")):
+        return False
+    if "escrow_wei" in job and (not _is_text(job["escrow_wei"]) or not job["escrow_wei"].isdigit()):
+        return False
+    if "delivery" in job:
+        delivery = job["delivery"]
+        if not isinstance(delivery, dict) or not _is_text(delivery.get("description")):
+            return False
+        if not _is_string_list(delivery.get("evidence_urls")):
+            return False
+    if "dispute" in job and job["dispute"] is not None:
+        dispute = job["dispute"]
+        if not isinstance(dispute, dict) or not _is_text(dispute.get("reason")):
+            return False
+        if not _is_uint(dispute.get("evidence_deadline")) or not _is_uint(dispute.get("recovery_deadline")):
+            return False
+        if not isinstance(dispute.get("client_responded"), bool) or not isinstance(dispute.get("worker_responded"), bool):
+            return False
+        if not _is_uint(dispute.get("retry_count")) or not _is_uint(dispute.get("round")):
+            return False
+        if not _is_string_list(dispute.get("client_evidence_urls")) or not _is_string_list(dispute.get("worker_evidence_urls")):
+            return False
+    return True
 
 
 class TurnMasterDirectory(gl.Contract):
@@ -35,13 +102,8 @@ class TurnMasterDirectory(gl.Contract):
             job = json.loads(raw)
         except Exception:
             raise gl.vm.UserError("Only a readable TurnMaster job can register")
-        required = ("client", "title", "description", "delivery_definition", "acceptance_criteria")
-        if not isinstance(job, dict) or any(key not in job for key in required):
+        if not _is_job_record(job):
             raise gl.vm.UserError("Only a readable TurnMaster job can register")
-        try:
-            Address(job["client"])
-        except Exception:
-            raise gl.vm.UserError("TurnMaster job returned an invalid client address")
         self.jobs.append(address)
         self.seen[address] = True
 
