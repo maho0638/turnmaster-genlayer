@@ -3,9 +3,18 @@ import { fileURLToPath } from "node:url";
 
 const source = fileURLToPath(new URL("../contracts/TurnMasterEscrow.py", import.meta.url));
 const published = fileURLToPath(new URL("../public/TurnMasterEscrow.py", import.meta.url));
-const [sourceText, publishedText] = await Promise.all([
-  readFile(source, "utf8"),
-  readFile(published, "utf8").catch(() => ""),
-]);
+const pairs = [
+  [source, published],
+  [
+    fileURLToPath(new URL("../contracts/TurnMasterDirectory.py", import.meta.url)),
+    fileURLToPath(new URL("../public/TurnMasterDirectory.py", import.meta.url)),
+  ],
+];
 
-if (sourceText !== publishedText) await copyFile(source, published);
+for (const [sourcePath, publishedPath] of pairs) {
+  const [sourceText, publishedText] = await Promise.all([
+    readFile(sourcePath, "utf8"),
+    readFile(publishedPath, "utf8").catch(() => ""),
+  ]);
+  if (sourceText !== publishedText) await copyFile(sourcePath, publishedPath);
+}

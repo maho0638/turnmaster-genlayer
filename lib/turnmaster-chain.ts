@@ -3,7 +3,10 @@ import { testnetBradbury } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus, type CalldataEncodable, type DecodedDeployData, type TransactionHash } from "genlayer-js/types";
 import { isAddress, parseEther, type Address } from "viem";
 import { createGenLayerWalletProvider } from "@/lib/genlayer-wallet-provider.mjs";
+import { assertBradburyWallet } from "@/lib/bradbury-wallet.mjs";
 import { normalizeTriggeredTransactionIds } from "@/lib/transaction-references.mjs";
+import { inspectPendingDeployment } from "@/lib/pending-deployment.mjs";
+import { directoryReadPlan, normalizeDirectoryAddresses } from "@/lib/job-directory.mjs";
 
 export type Eip1193Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -59,6 +62,9 @@ export class SubmittedTransactionError extends Error {
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/;
+// The board is a recent-work view. Bound discovery reads to keep a public
+// directory from triggering unbounded RPC fan-out in every visitor's browser.
+const configuredDirectoryAddress = process.env.NEXT_PUBLIC_TURNMASTER_DIRECTORY_ADDRESS ?? "";
 
 function readClient() {
   return createClient({ chain: testnetBradbury });
@@ -108,6 +114,34 @@ export async function readOnchainJob(address: Address): Promise<OnchainJob> {
   const client = readClient();
   const jobRaw = await client.readContract({ address, functionName: "get_job", args: [] });
   return parseReturnedJson<OnchainJob>(jobRaw, "Job record");
+}
+
+export async function readOnchainDirectoryAddresses(): Promise<Address[]> {
+  if (!configuredDirectoryAddress) return [];
+  if (!isContractAddress(configuredDirectoryAddress)) {
+    throw new Error("The public TurnMaster directory address is invalid.");
+  }
+  const client = readClient();
+  const countRaw = await client.readContract({
+    address: configuredDirectoryAddress,
+    functionName: "get_job_count",
+    args: [],
+  });
+  const count = Number(countRaw);
+  if (!Number.isSafeInteger(count) || count < 0) throw new Error("Directory returned an invalid job count.");
+  const pages = directoryReadPlan(count);
+  const addresses: Address[] = [];
+  for (const { offset, limit } of pages) {
+    const raw = await client.readContract({
+      address: configuredDirectoryAddress,
+      functionName: "get_jobs",
+      args: [offset, limit],
+    });
+    const page = parseReturnedJson<unknown>(raw, "Public job directory");
+    if (!Array.isArray(page)) throw new Error("Directory returned an invalid address page.");
+    addresses.push(...normalizeDirectoryAddresses(page).filter(isContractAddress));
+  }
+  return addresses;
 }
 
 async function waitForFinalized(
@@ -161,6 +195,7 @@ export async function deployOnchainJob(input: {
   reward: string;
   commissionPercent: string;
   feeRecipient: string;
+  directoryAddress?: string;
 }): Promise<{ address: Address; tx: TxResult; job: OnchainJob }> {
   const reward = parseRewardToWei(input.reward);
   const commissionBps = Math.round(Number(input.commissionPercent) * 100);
@@ -174,6 +209,10 @@ export async function deployOnchainJob(input: {
     }
     feeRecipient = input.feeRecipient;
   }
+  const directoryAddress = input.directoryAddress?.trim() || ZERO_ADDRESS;
+  if (directoryAddress !== ZERO_ADDRESS && !isContractAddress(directoryAddress)) {
+    throw new Error("The public TurnMaster directory address is invalid. No wallet transaction was sent.");
+  }
 
   const sourceResponse = await fetch("/TurnMasterEscrow.py", { cache: "no-store" });
   if (!sourceResponse.ok) {
@@ -184,8 +223,8 @@ export async function deployOnchainJob(input: {
     throw new Error("The downloaded TurnMaster contract source is invalid. No wallet transaction was sent.");
   }
 
+  await assertBradburyWallet(input.provider, input.walletAddress);
   const client = writeClient(input.walletAddress, input.provider);
-  await client.connect("testnetBradbury");
   const hash = await client.deployContract({
     code: escrowSource,
     args: [
@@ -198,26 +237,27 @@ export async function deployOnchainJob(input: {
       reward,
       commissionBps,
       feeRecipient,
+      directoryAddress,
     ],
   }) as TransactionHash;
   try {
     await waitForFinalized(client, hash);
+    const transaction = await client.getTransaction({ hash });
+    const decoded = transaction.txDataDecoded;
+    const deploymentAddress = (decoded as DecodedDeployData | undefined)?.contractAddress;
+    const candidate = deploymentAddress ?? transaction.recipient ?? transaction.to_address;
+    if (!candidate || !isContractAddress(candidate)) {
+      throw new Error(`Deployment finalized but the SDK did not return a verifiable contract address. Transaction: ${hash}`);
+    }
+    const address = candidate as Address;
+    const job = await readOnchainJob(address);
+    if (job.client.toLowerCase() !== input.walletAddress.toLowerCase()) {
+      throw new Error(`Deployment address returned a contract owned by a different account. Transaction: ${hash}`);
+    }
+    return { address, tx: { hash, children: await transactionChildren(client, hash) }, job };
   } catch (error) {
     throw new SubmittedTransactionError(hash, error);
   }
-  const transaction = await client.getTransaction({ hash });
-  const decoded = transaction.txDataDecoded;
-  const deploymentAddress = (decoded as DecodedDeployData | undefined)?.contractAddress;
-  const candidate = deploymentAddress ?? transaction.recipient ?? transaction.to_address;
-  if (!candidate || !isContractAddress(candidate)) {
-    throw new Error(`Deployment finalized but the SDK did not return a verifiable contract address. Transaction: ${hash}`);
-  }
-  const address = candidate as Address;
-  const job = await readOnchainJob(address);
-  if (job.client.toLowerCase() !== input.walletAddress.toLowerCase()) {
-    throw new Error(`Deployment address returned a contract owned by a different account. Transaction: ${hash}`);
-  }
-  return { address, tx: { hash, children: await transactionChildren(client, hash) }, job };
 }
 
 export async function writeOnchainJob(input: {
@@ -228,8 +268,8 @@ export async function writeOnchainJob(input: {
   args?: CalldataEncodable[];
   value?: bigint;
 }): Promise<TxResult> {
+  await assertBradburyWallet(input.provider, input.walletAddress);
   const client = writeClient(input.walletAddress, input.provider);
-  await client.connect("testnetBradbury");
   const hash = await client.writeContract({
     address: input.address,
     functionName: input.functionName,
@@ -244,9 +284,19 @@ export async function writeOnchainJob(input: {
   return { hash, children: await transactionChildren(client, hash) };
 }
 
+/** Recover an existing hash; never broadcasts or signs anything. */
+export async function inspectSubmittedDeployment(hash: string, deployer: string) {
+  const client = readClient();
+  return inspectPendingDeployment(hash, deployer, {
+    getState: finalizedTransactionState,
+    getTransaction: (id: string) => client.getTransaction({ hash: id as TransactionHash }),
+    readJob: (address: string) => readOnchainJob(address as Address),
+  });
+}
+
 export function transactionError(error: unknown): string {
   const candidate = error as { code?: number; shortMessage?: string; message?: string; name?: string };
-  if (candidate?.name === "SubmittedTransactionError") return "MetaMask returned a transaction ID, but Bradbury has not confirmed the result yet. Check the Explorer link below before trying again.";
+  if (candidate?.name === "SubmittedTransactionError") return "A transaction was sent, but TurnMaster could not verify its final state or deployment address. Check Bradbury Explorer; never retry a successful transaction.";
   if (candidate?.code === 4001) return "The wallet request was rejected. No contract state was changed.";
   if (candidate?.code === -32603 || candidate?.message?.toLowerCase().includes("fetch")) {
     return "The Bradbury request failed. MetaMask must use https://rpc-bradbury.genlayer.com as the default RPC for GenLayer Bradbury (chain 4221). TurnMaster keeps ConsensusMain gas below Bradbury’s current transaction cap. Check MetaMask Activity or the Explorer before retrying any submitted transaction.";

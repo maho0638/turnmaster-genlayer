@@ -6,11 +6,11 @@ This repository contains a newly implemented application based on the TurnMaster
 
 ## Current application scope
 
-- The board's illustrative records are all marked **SAMPLE** and are not chain records. A real contract can be loaded with its Bradbury address.
+- The board has no illustrative or placeholder jobs. It starts empty, then shows a record only after reading and verifying that Bradbury contract with `get_job()`. Existing published contracts are included as addresses; users can also open another contract by address.
 - A connected wallet can deploy one immutable-terms `TurnMasterEscrow` contract per job. Deployment and escrow funding are separate transactions. A new contract is displayed as unfunded until its funding transaction finalizes.
 - Job terms, delivery, criteria, reward, deadline, current state, escrow balance, decision report, and relevant transaction links are read from the Bradbury contract. Users can re-import a contract by address after a page refresh.
 - Wallet actions include fund, claim, submit delivery, accept, request revision, open dispute, submit dispute evidence, evaluate a dispute, refund an undelivered job after deadline, and cancel an unfunded job. Actions are enabled based on the connected wallet role and on-chain state.
-- A page-session draft is explicitly labelled as local and is cleared on refresh. The app has no shared job indexer or persistent database.
+- The board contains only verified on-chain jobs; it does not put local drafts on the board. The app can read a shared, on-chain job directory when `NEXT_PUBLIC_TURNMASTER_DIRECTORY_ADDRESS` is configured; without that deployment setting, newly created addresses remain local to the creator's browser.
 - The app does not store private keys, seed phrases, or uploaded documents. Evidence is supplied as public HTTPS links.
 - The planned release fee is shown before contract deployment and applies only when a reward is released to a worker. Refunds have a zero fee. The default form value is 1.5%, but a non-zero fee cannot be deployed unless `NEXT_PUBLIC_TURNMASTER_FEE_RECIPIENT` contains a valid address. This build has no configured recipient; set the fee to 0% for a test deployment.
 
@@ -72,7 +72,7 @@ The suite pins the direct runner to runtime `v0.2.12` because the then-current t
 5. Review the deployed contract address and Explorer transaction link. Use the separate **Fund** action to deposit exactly the agreed reward; the app then verifies the finalized transaction and re-reads escrow state.
 6. Continue with claim, delivery, review, and dispute actions. Each signed action shows the network, contract address, value, purpose, and fee prompt before opening the wallet.
 
-There is no shared on-chain board: retain the deployed contract address to re-open the job in a later session. Never enter or commit a private key or seed phrase. Use only testnet GEN. This is not ready for real funds and is not legal arbitration.
+The optional shared on-chain board uses `contracts/TurnMasterDirectory.py`. Deploy it to Bradbury, seed it with the already-published TurnMaster addresses, set `NEXT_PUBLIC_TURNMASTER_DIRECTORY_ADDRESS` to its address in the public app build, and deploy that build before shared discovery is active. New job contracts then enqueue a finalized registration call to the directory; the board verifies each listed job directly with `get_job()` and reads the latest 100 directory entries. Without that configured directory deployment, retain the job address or share its link to re-open it. Never enter or commit a private key or seed phrase. Use only testnet GEN. This is not ready for real funds and is not legal arbitration.
 
 ## Reviewer proof and Portal-ready evidence
 
@@ -94,7 +94,7 @@ The reviewer materials distinguish genuine Bradbury transactions, controlled-tim
 
 - An upgraded TurnMasterEscrow deployment and two inconclusive dispute reviews were verified on Bradbury, including a funded 0.1 GEN escrow and one retry. See the steward remediation report for verified transaction references.
 - The seven-day live timeout refund has not been executed; its conditions and full recovery were tested using controlled-time direct GenVM tests. New deployments still require a connected, funded Bradbury wallet and explicit approval.
-- Job records created from the app are not indexed or persisted centrally. A contract address is required to import the job after refreshing the page.
+- Shared discovery is inactive until the directory contract is deployed and its public address is configured in a build delivered to visitors. The source code supports it, but this repository alone cannot publish that on-chain address.
 - The stable app interface uses public URLs for evidence and has no private-document upload or storage feature.
 - The original deployed V1 is immutable and does not have undetermined-dispute recovery. The main branch now has the upgraded contract; newly deployed jobs use the 48-hour evidence-response rule, one retry, and fixed seven-day refund.
 - Non-zero release commission is unavailable until a valid fee recipient is configured in the deployment environment. Zero-fee jobs are allowed.
@@ -117,4 +117,4 @@ CI additionally runs GenVM contract lint, direct contract tests, live RPC/prefli
 
 The improved source was merged, and a new Bradbury job verified funding, claim, delivery, two inconclusive consensus reviews, one permitted retry, and preservation of 0.1 test GEN. The 48-hour evidence-response and seven-day client recovery rules passed direct contract tests; the live seven-day refund remains unexecuted. See [the remediation report](docs/STEWARD_REMEDIATION_2026_10_08.md).
 
-**10 October steward follow-up:** the **Deploy terms on Bradbury** button used to be hard-disabled when a wallet was disconnected, RPC or native GEN verification failed, or a non-zero release fee had no recipient. It now remains clickable to show an actionable reason and a direct connection/RPC/faucet/fee remedy. The underlying wallet, chain, fee and duplicate-transaction safeguards remain enforced. A reviewer can alternatively create a clearly browser-only draft or view a finalized Bradbury deployment without signing. See [the reviewer walkthrough](docs/REVIEWER_GUIDE.md).
+**10 October steward follow-up:** the **Deploy terms on Bradbury** button used to be hard-disabled when a wallet was disconnected, RPC or native GEN verification failed, or a non-zero release fee had no recipient. It now remains clickable to show an actionable reason and a direct connection/RPC/faucet/fee remedy. The underlying wallet, chain, fee and duplicate-transaction safeguards remain enforced. A reviewer without a funded wallet can open a finalized Bradbury deployment without signing. See [the reviewer walkthrough](docs/REVIEWER_GUIDE.md).

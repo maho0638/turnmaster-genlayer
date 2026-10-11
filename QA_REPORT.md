@@ -1,43 +1,58 @@
-# TurnMaster QA report — 10 October 2026
+# TurnMaster QA report — 11 October 2026
 
-## Current verified baseline
+## Audit target
 
-TurnMaster is testnet-only, never a production-money escrow or legal arbitration service.
+This report covers the local worktree based on PR #13 branch `fix/real-onchain-board-steward`, base commit `4bdbda0a4cb13233b489030cd37fc7f784f3535f`, plus the uncommitted changes shown in `git status`. It does not describe a GitHub or Vercel deployment.
 
-| Check | Result | Evidence / scope |
+## Steward requirements checked
+
+- The public board initializes with an empty list. The only job details shown are constructed after a successful `get_job()` read for a configured, imported, or directory-listed contract. Read errors do not fall back to fabricated jobs.
+- The UI no longer calls its live-chain status chip a “sample”; styles and JSX use `chain-status-label`. This is a naming cleanup, not a data-flow change.
+- The pinned `genlayer-js` package includes a separate `connect()` helper that can request wallet Snaps. TurnMaster does not call that helper: reads use an account-free client and writes use the EIP-1193 provider directly. Static regression checks cover this path. An actual MetaMask extension reproduction against the current build was not available in this environment, so the steward's browser-specific `wallet_getSnaps` report is not claimed closed here.
+- Deployment recovery keeps a transaction hash until the finalized transaction, deployed contract address, and matching client are verified. Wallet lock, account, chain and native-balance checks are covered by unit tests.
+- Shared discovery is still conditional: a directory contract must be deployed and its address configured in the visitor-facing build. That deployment/configuration has not been performed here.
+- Live seven-day escrow recovery remains pending until the on-chain deadline and a signed refund can be verified. Controlled-time contract tests do not count as a live refund.
+
+## Local verification
+
+| Check | Result | Evidence / limitation |
 | --- | --- | --- |
-| Last released web and contract CI | PASS | https://github.com/maho0638/turnmaster-genlayer/actions/runs/37843152167 |
-| Direct contract suite (dispute/recovery) | 25 PASS | `tests/test_contract_direct.py`, with controlled time and mocked evidence |
-| GenVM lint and deployed source integrity | PASS | GitHub Actions contract workflow and `tests/contract-source.test.mjs` |
-| Live deployed new escrow | FINALIZED | https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57 |
-| Live wallet lifecycle | PARTIAL, VERIFIED | A new 0.1 test-GEN job funded, claimed and delivered, with both parties' dispute evidence, two inconclusive reviews and one finalized retry. Funds remained locked. |
-| Live seven-day recovery | NOT YET TESTED LIVE | Automated time-advanced tests verified 100% recovery to client without double settlement. Real Bradbury escrow must reach the seven-day deadline before a signed live refund is provable. |
-| New steward deployment-button issue | FIX IN REVIEW | Fresh code makes the button clickable and explains unmet wallet/RPC/native-GEN/fee/pending conditions. New regression checks run in PR CI before promotion. No deployment is sent merely by clicking without a wallet. |
+| Clean Node install | PASS | `npm ci` completed with Node 24.19.0; project engine requires Node `>=22.13.0`. |
+| ESLint | PASS | `npm run lint` |
+| Full TypeScript | PASS | `npx tsc --noEmit` |
+| Targeted TypeScript safety checks | PASS | Included in `npm run test:network` |
+| JavaScript regression suite | PASS | `npm run test:regression`: 13 test files, 13 passed, 0 failed |
+| Network / wallet regression suite | PASS | `npm run test:network`: 9 test files passed, then strict safety type check passed |
+| Project proof | PASS | `npm run test:project-proof` |
+| Real-chain-only board assertions | PASS | `npm run test:real-board` |
+| Registry | PASS | `npm run test:registry` |
+| Contract proof | PASS | `npm run test:contract-proof` |
+| Python contract regressions | PASS | `tests/test_contract_direct.py` and `tests/test_directory_direct.py`: 30 passed |
+| GenVM contract lint | PASS; validation incomplete | `genvm-lint lint` passed for both escrow and directory contracts (3 checks each). `genvm-lint check` cannot complete SDK validation because `/root/.cache/genvm-linter` is read-only and the linter cannot fetch its GenVM artifact in this environment. |
+| `npm run build:vercel` local production build | PASS | Next.js 16.3.4 Turbopack compiled successfully, completed TypeScript, generated all static pages, and finalized the production build. This ran locally and did not contact Vercel. |
+| Local production HTTP smoke tests | PASS | Started `next start` on `127.0.0.1:3417`; `/`, `/reviewer`, `/project-proof.json`, and `/TurnMasterEscrow.py` each returned HTTP 200 and expected content. Server stopped after checks. |
+| Live Bradbury RPC, board RPC, deploy preflight | BLOCKED | All three read-only commands fail DNS resolution with `EAI_AGAIN` for `rpc-bradbury.genlayer.com`, including the elevated retry. No transaction was signed or broadcast. |
 
-## October 10 steward usability regression
+The production build shown in the user's Windows console succeeded on the earlier local copy. It is not counted as proof for the later uncommitted changes in this audit worktree.
 
-Steward reported: **"this button is not clickable Deploy terms on Bradbury / i want to create a job and the button refused to click"**.
+## Findings corrected during this audit
 
-Root cause identified in `app/page.tsx`: the action was strictly disabled by wallet connectivity, balance-fetch state, native GEN amount, network mismatch, pending hash, and fee-recipient configuration. In a disconnected or unfunded review browser it was inert, even when the rest of the form was accessible.
+- Removed obsolete README and QA claims that the dashboard showed example/sample records.
+- Corrected documentation that claimed browser-only drafts were available; the current interface has no draft action and never mixes drafts into the board.
+- Renamed the live status chip's CSS class from `sample-label` to `chain-status-label`, removed unused sample-card styles, and added regression assertions against restoring those misleading names.
+- Updated the reviewer guide to state precisely that the installed SDK contains a Snap-capable helper, while the app does not invoke it. The actual external MetaMask issue remains unverified.
+- Reworked the contract's invalid adjudication fallback to avoid raising a bare `ValueError`; invalid or malformed verdicts still deterministically become `unverifiable`.
+- The final contract-source parity test caught a stale public copy after the contract edit. Ran `scripts/sync-contract-source.mjs`; the source and public copy are now identical, and the parity regression test passes.
 
-Fix behavior:
+## Changed files
 
-1. **Deploy terms on Bradbury** is clickable unless another on-chain operation is actively in progress.
-2. The click yields a specific reason when requirements are missing, with in-dialog **Connect wallet**, **Fix Bradbury RPC**, **official faucet**, **Set fee to 0%**, or a verified deployment proof link.
-3. **Add session draft** remains independent of wallet state; it does not claim on-chain deployment.
-4. The transaction handler still verifies wallet, correct Bradbury chain 4221, positive native GEN, valid terms, supported fee setup and no unresolved prior deployment before submitting to the wallet.
-5. A true signed deployment still requires the reviewer to possess an eligible wallet and approve the transaction. The software cannot provide signing rights to someone else's wallet.
+- `.github/workflows/verify.yml`, `package.json`, `scripts/sync-contract-source.mjs`
+- `README.md`, `QA_REPORT.md`, `docs/ARCHITECTURE.md`, `docs/REVIEWER_GUIDE.md`, `docs/SECURITY_MODEL.md`
+- `app/contract-workflow.tsx`, `app/page.tsx`, `app/globals.css`, `app/premium.module.css`
+- `contracts/TurnMasterEscrow.py`, `contracts/TurnMasterDirectory.py`, `public/TurnMasterEscrow.py`, `public/TurnMasterDirectory.py`
+- `lib/deploy-readiness.mjs`, `lib/genlayer-network.mjs`, `lib/turnmaster-chain.ts`, `lib/bradbury-wallet.mjs`, `lib/job-directory.mjs`, `lib/pending-deployment.mjs`, `lib/verified-board.mjs`
+- `tests/contract-source.test.mjs`, `tests/project-proof.test.mjs`, `tests/real-board.test.mjs`, `tests/bradbury-wallet.test.mjs`, `tests/job-directory.test.mjs`, `tests/pending-deployment.test.mjs`, `tests/test_directory_direct.py`, `tests/verified-board.test.mjs`, `tests/verified-board.typecheck.ts`, `tests/wallet-lock.test.mjs`
 
-Regression coverage: `tests/deploy-readiness.test.mjs` and the on-page audit assertions in `tests/project-proof.test.mjs`. Lint, type check, build, RPC smoke, no-broadcast deploy preflight, GenVM lint and direct contract tests must pass before a main-branch deployment.
+## Current status
 
-## Historic gas failure, resolved before this change
-
-An earlier Bradbury deploy failed when the original contract approached/exceeded the 16,777,216 gas cap. A compact contract, official GenLayer RPC and bounded gas headroom were implemented and successfully verified before the October 8 live deployment. This latest usability fix **does not modify the GenLayer Python contract or gas handling**.
-
-## Residual limits
-
-- No central indexer: app jobs are re-importable by full on-chain address. Example board cards are visually marked SAMPLE.
-- Web-based evidence URLs can change externally; TurnMaster does not archive their content.
-- No live signed timeout refund can be represented until the seven-day period passes.
-- End-user wallets need native testnet GEN for transaction network fees. Official faucet: https://testnet-faucet.genlayer.foundation/.
-- There is no substitute for a wallet-connected human to test actual wallet permission dialogs; CI verifies source and a no-broadcast preflight, not every external browser extension state.
+The local production build, all JavaScript regressions, full TypeScript and ESLint, local production HTTP smoke tests, GenVM lint checks, and 30 direct contract tests pass. This audit cannot certify every external integration: live read-only checks were blocked by RPC DNS; current-build MetaMask behavior needs a real extension; shared discovery awaits a directory deployment/configuration; GenVM semantic validation awaits access to its cache/artifact; and the real seven-day refund awaits its deadline. No checks were weakened, and no chain write was attempted.
