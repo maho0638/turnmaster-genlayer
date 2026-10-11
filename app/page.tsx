@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { explorerAddressUrl, type Eip1193Provider, type OnchainJob, type TxResult } from "@/lib/turnmaster-chain";
 import { getDeployReadiness } from "@/lib/deploy-readiness.mjs";
-import { ensureBradburyNetwork, assertBradburyWallet, readWalletUnlocked, mayExposeWalletAccount } from "@/lib/bradbury-wallet.mjs";
+import { ensureBradburyNetwork, assertBradburyWallet, readWalletUnlocked, mayExposeWalletAccount, revokeWalletSitePermission } from "@/lib/bradbury-wallet.mjs";
 import { reconcileVerifiedJobs, classifyBoardRead } from "@/lib/verified-board.mjs";
 import { BRADBURY_CHAIN_ID, BRADBURY_WALLET_NETWORK, formatWeiGen, isEvmAddress, readBradburyNativeBalanceWei } from "@/lib/genlayer-network.mjs";
 import type { Address } from "viem";
@@ -105,6 +105,8 @@ export default function Home() {
   const [walletBalanceError, setWalletBalanceError] = useState(false);
   const [networkRepairBusy, setNetworkRepairBusy] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
+  const [walletDisconnectBusy, setWalletDisconnectBusy] = useState(false);
+  const [disconnectPermissionWarning, setDisconnectPermissionWarning] = useState(false);
   const [wrongNetwork, setWrongNetwork] = useState(false);
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -219,11 +221,11 @@ export default function Home() {
   }, [notice]);
 
   useEffect(() => {
-    if (!walletMessage || networkRepairBusy) return;
+    if (!walletMessage || networkRepairBusy || disconnectPermissionWarning) return;
     const delay = wrongNetwork || walletBalanceError ? 12_000 : 5_000;
     const timer = window.setTimeout(() => setWalletMessage(""), delay);
     return () => window.clearTimeout(timer);
-  }, [walletMessage, wrongNetwork, walletBalanceError, networkRepairBusy]);
+  }, [walletMessage, wrongNetwork, walletBalanceError, networkRepairBusy, disconnectPermissionWarning]);
 
   useEffect(() => {
     const onShortcut = (event: KeyboardEvent) => {
@@ -432,9 +434,11 @@ export default function Home() {
     }
   };
 
-  const disconnectWallet = () => {
-    // EIP-1193 has no standard disconnect method. Close TurnMaster's local
-    // session and remove its provider listeners; MetaMask site permission is separate.
+  const disconnectWallet = async () => {
+    if (walletDisconnectBusy) return;
+    const provider = walletProvider;
+    // Drop the local session immediately, regardless of permission RPC result.
+    // A failed or rejected MetaMask revoke must never be described as success.
     walletSessionConfirmed.current = false;
     setWalletAddress("");
     setWalletProvider(null);
@@ -443,11 +447,38 @@ export default function Home() {
     setWrongNetwork(false);
     setNetworkRepairBusy(false);
     setWalletMenuOpen(false);
-    setWalletMessage("");
-    setNotice("Disconnected from TurnMaster. To revoke site access, remove TurnMaster in MetaMask's Connected sites settings.");
+    setDisconnectPermissionWarning(false);
+    setWalletMessage("Disconnected locally. Checking MetaMask site permission…");
+    if (!provider) {
+      setWalletMessage("TurnMaster session closed. MetaMask permission could not be checked; use MetaMask > Dapp connections if needed.");
+      setDisconnectPermissionWarning(true);
+      return;
+    }
+    setWalletDisconnectBusy(true);
+    try {
+      const result = await revokeWalletSitePermission(provider);
+      if (result.status === "revoked") {
+        setWalletMessage("Disconnected from TurnMaster. MetaMask confirmed that site account access was removed.");
+      } else {
+        const reason = result.status === "rejected" ? "Permission removal was declined."
+          : result.status === "unsupported" ? "This wallet does not support permission removal from the site."
+          : result.status === "still_authorized" ? "MetaMask still grants this site account access."
+          : result.status === "unverified" ? "MetaMask did not confirm that site permission was removed."
+          : "MetaMask permission removal failed.";
+        setWalletMessage(`TurnMaster session closed. ${reason} To disconnect fully: MetaMask > Dapp connections > TurnMaster > Disconnect.`);
+        setDisconnectPermissionWarning(true);
+      }
+    } catch {
+      setWalletMessage("TurnMaster session closed, but MetaMask site permission could not be checked. Disconnect TurnMaster in MetaMask > Dapp connections.");
+      setDisconnectPermissionWarning(true);
+    } finally {
+      setWalletDisconnectBusy(false);
+    }
   };
 
   const connectWallet = async () => {
+    if (walletDisconnectBusy) { setWalletMessage("Wait for the previous MetaMask disconnect check to finish."); return; }
+    setDisconnectPermissionWarning(false);
     setWalletMessage("");
     const provider = (window as Window & { ethereum?: Eip1193Provider }).ethereum;
     if (!provider) { setWalletMessage("No EIP-1193 wallet detected. Install a compatible wallet to connect."); return; }
@@ -704,7 +735,7 @@ export default function Home() {
           <button type="button" role="menuitem" onClick={disconnectWallet}><LogOut size={14}/>Disconnect wallet</button>
         </div>
       </div>}
-    </div> : <Button className="connect-button" onClick={connectWallet}><Wallet size={15} />Connect wallet</Button>}</div></header>
+    </div> : <Button className="connect-button" onClick={connectWallet} disabled={walletDisconnectBusy}><Wallet size={15} />{walletDisconnectBusy ? "Disconnecting…" : "Connect wallet"}</Button>}</div></header>
       <div className="preview-banner"><span className="preview-dot" /><b>TESTNET PREVIEW</b><span>Displayed work is read from verified GenLayer Bradbury contracts only</span><button aria-label="What does testnet preview mean?" onClick={() => setNotice(publicDirectoryConfig ? "The shared directory provides the latest 100 TurnMaster addresses to every visitor; each job is then verified directly on Bradbury. Without the directory service, new addresses stay local or must be shared using Open contract." : "This build has no shared job directory configured. New user-deployed addresses stay in the creator's browser or must be shared using Open contract. Only current Bradbury contract data is displayed; no example jobs are generated.")}><CircleHelp size={15} /></button></div>
       <div className="content-wrap">
         <div className="page-heading premium-hero">
