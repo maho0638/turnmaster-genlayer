@@ -43,7 +43,7 @@ The upgraded job had **0.1 test GEN in escrow**, two finalized `undetermined` de
 
 The **seven-day timeout refund** and early one-sided resolution rejections were proven in **controlled-time direct contract tests**, not by waiting seven real days and signing a live refund. The testnet escrow still awaiting that deadline must not be misrepresented as already refunded.
 
-Live signing, testnet GEN acquisition and chain configuration remain external prerequisites for *new* deployments. A read-only on-chain proof or browser session draft cannot replace a new signed deployment. CI results prove code and mock-time recovery paths, not an external reviewer's funded-wallet availability.
+Live signing, testnet GEN acquisition and chain configuration remain external prerequisites for *new* deployments. A read-only on-chain proof cannot replace a new signed deployment. CI results prove code and mock-time recovery paths, not an external reviewer's funded-wallet availability.
 
 ## Further links
 
@@ -57,4 +57,4 @@ Live signing, testnet GEN acquisition and chain configuration remain external pr
 
 As of the real-data remediation, the public dashboard no longer initializes with five illustrative jobs or permits session-only drafts to appear alongside blockchain work. A fresh browser discovers independently confirmed TurnMaster Bradbury addresses from `lib/public-contracts.mjs`; the addresses are pointers, NOT content. Every displayed title, reward, criteria, escrow balance, delivery and status is read using GenLayer `get_job()` directly from that deployed contract. Failed RPC reads display an error/empty state, not fabricated jobs. Visitors can import and inspect additional Bradbury contracts using **Open contract** without a wallet. The public registry is limited to known published contract addresses; it is not a general blockchain indexer for every new deployment. No wallet signature is required for read-only inspection.
 
-The steward's reported `wallet_getSnaps` error is not invoked by any TurnMaster application source file. We are treating it as an open wallet/provider integration reproduction issue, rather than claiming the on-chain or browser-wallet problem fixed without a reproducible trace.
+The pinned `genlayer-js` package contains a Snap request in its separate wallet `connect()` helper. TurnMaster does not call that helper: read-only calls use an account-free client, while signed calls use the normal EIP-1193 `eth_requestAccounts` flow and a provider-backed client. Repository tests assert that application code does not call `connect()` or request wallet Snaps. The steward's browser error still requires reproduction with the exact deployed build and wallet extension before claiming the external MetaMask issue is closed.

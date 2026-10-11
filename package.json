@@ -15,15 +15,18 @@
     "build:vercel": "next build",
     "start": "node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --config dist/server/wrangler.json --local --persist-to .wrangler/state --ip 127.0.0.1 --inspector-port 0",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test:network": "node --test tests/genlayer-network.test.mjs tests/wallet-provider.test.mjs tests/contract-source.test.mjs tests/deploy-readiness.test.mjs",
+    "test:network": "node --test tests/genlayer-network.test.mjs tests/wallet-provider.test.mjs tests/wallet-lock.test.mjs tests/bradbury-wallet.test.mjs tests/verified-board.test.mjs tests/pending-deployment.test.mjs tests/job-directory.test.mjs tests/contract-source.test.mjs tests/deploy-readiness.test.mjs && npm run test:safety-types",
     "db:generate": "drizzle-kit generate",
     "test:live-rpc": "node tests/live-rpc-smoke.mjs",
     "test:deploy-preflight": "node tests/live-deploy-preflight.mjs",
     "test:project-proof": "node --test tests/project-proof.test.mjs",
     "test:registry": "node --test tests/job-registry.test.mjs",
+    "test:directory": "node --test tests/job-directory.test.mjs && python -m pytest tests/test_directory_direct.py -q",
     "test:contract-proof": "node --test tests/contract-proof.test.mjs",
     "test:real-board": "node --test tests/real-board.test.mjs",
-    "test:live-board-rpc": "node tests/live-board-rpc.mjs"
+    "test:live-board-rpc": "node tests/live-board-rpc.mjs",
+    "test:safety-types": "tsc --noEmit --allowJs --checkJs --strict --skipLibCheck --module esnext --target es2017 --moduleResolution bundler lib/bradbury-wallet.mjs lib/verified-board.mjs lib/pending-deployment.mjs tests/verified-board.typecheck.ts",
+    "test:regression": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

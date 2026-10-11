@@ -22,6 +22,10 @@ Each deployed contract represents one job. It stores:
 - dispute evidence and decision report;
 - terminal status.
 
+### TurnMasterDirectory Intelligent Contract
+
+The optional directory stores public job contract addresses in a GenLayer `DynArray`. A new escrow emits an idempotent registration message after the escrow deployment finalizes. The directory checks that the sender exposes a readable TurnMaster `get_job()` record, then adds it once. Visitors read the latest 100 addresses from the directory and independently verify every job directly against its escrow contract. This feature is active only after the directory is deployed and its address is configured as `NEXT_PUBLIC_TURNMASTER_DIRECTORY_ADDRESS` in the visitor-facing build.
+
 ### GenLayer consensus path
 
 For disputes, the contract:

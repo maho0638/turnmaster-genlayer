@@ -42,7 +42,8 @@ class TurnMasterEscrow(gl.Contract):
 
     def __init__(self, title: str, description: str, delivery_definition: str,
                  acceptance_criteria_json: str, proof_type: str, deadline: u256,
-                 reward: u256, commission_bps: u32, fee_recipient: str):
+                 reward: u256, commission_bps: u32, fee_recipient: str,
+                 directory_address: str = ZERO):
         title, description, delivery_definition = title.strip(), description.strip(), delivery_definition.strip()
         try:
             criteria = json.loads(acceptance_criteria_json)
@@ -71,6 +72,9 @@ class TurnMasterEscrow(gl.Contract):
         self.evidence_deadline, self.recovery_deadline = u256(0), u256(0)
         self.client_responded, self.worker_responded = u32(0), u32(0)
         self.retry_count, self.dispute_round = u32(0), u32(0)
+        directory = Address(directory_address)
+        if directory != Address(ZERO):
+            gl.get_contract_at(directory).emit(on="finalized").register_job()
 
     def _now(self) -> int:
         return int(datetime.now(timezone.utc).timestamp())
@@ -248,9 +252,9 @@ class TurnMasterEscrow(gl.Contract):
         )
         try:
             verdicts = json.loads(raw)
-            if not isinstance(verdicts, list) or len(verdicts) != len(criteria) or any(v not in ("pass", "fail", "unverifiable") for v in verdicts):
-                raise ValueError()
         except Exception:
+            verdicts = None
+        if not isinstance(verdicts, list) or len(verdicts) != len(criteria) or any(v not in ("pass", "fail", "unverifiable") for v in verdicts):
             verdicts = ["unverifiable"] * len(criteria)
 
         if all(v == "pass" for v in verdicts):

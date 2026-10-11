@@ -36,7 +36,7 @@ TurnMaster is testnet software. It is not legal arbitration and must not be used
 
 - Every write requires explicit wallet approval.
 - The app verifies Bradbury chain ID 4221 before broadcasting writes. The Deploy button may be clicked without a wallet solely to display an actionable error; it never skips on-chain checks.
-- Native Bradbury GEN is checked separately before any deployment is broadcast. A disconnected, wrong-network, or unfunded reviewer can inspect an existing contract or save a browser-only draft without signing.
+- Native Bradbury GEN is checked separately before any deployment is broadcast. A disconnected, wrong-network, or unfunded reviewer can inspect an existing contract without signing.
 - A submitted-but-unverified transaction hash is stored in session storage and blocks duplicate writes until the user checks Explorer.
 - Deployment, funding and later contract actions are separate transactions so a deployment cannot silently transfer the job reward.
 
@@ -44,7 +44,7 @@ TurnMaster is testnet software. It is not legal arbitration and must not be used
 
 - No private keys or seed phrases are stored.
 - No private file upload exists; the evidence model is intentionally public URL based.
-- Browser-only drafts are clearly marked and are not represented as on-chain records.
+- The public board does not show browser-only drafts or other fabricated job records.
 - The project has no shared indexer; a real contract is reopened by its public address.
 
 ## Known residual risks
