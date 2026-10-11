@@ -6,7 +6,7 @@ import { createGenLayerWalletProvider } from "@/lib/genlayer-wallet-provider.mjs
 import { assertBradburyWallet } from "@/lib/bradbury-wallet.mjs";
 import { normalizeTriggeredTransactionIds } from "@/lib/transaction-references.mjs";
 import { inspectPendingDeployment } from "@/lib/pending-deployment.mjs";
-import { directoryReadPlan, normalizeDirectoryAddresses } from "@/lib/job-directory.mjs";
+import { directoryReadPlan, isValidOnchainJob, normalizeDirectoryAddresses } from "@/lib/job-directory.mjs";
 
 export type Eip1193Provider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -113,7 +113,9 @@ function parseReturnedJson<T>(value: unknown, label: string): T {
 export async function readOnchainJob(address: Address): Promise<OnchainJob> {
   const client = readClient();
   const jobRaw = await client.readContract({ address, functionName: "get_job", args: [] });
-  return parseReturnedJson<OnchainJob>(jobRaw, "Job record");
+  const job = parseReturnedJson<unknown>(jobRaw, "Job record");
+  if (!isValidOnchainJob(job)) throw new Error("Contract returned an invalid TurnMaster job record.");
+  return job as OnchainJob;
 }
 
 export async function readOnchainDirectoryAddresses(): Promise<Address[]> {
