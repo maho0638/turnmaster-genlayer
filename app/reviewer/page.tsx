@@ -32,6 +32,12 @@ const checks = [
 
 const artifacts = [
   ["Production app", "https://turnmaster-genlayer.vercel.app", "Open the public work board and wallet flow."],
+  ["LIVE: 7-day full refund FINALIZED (Oct 15)", "https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5", "Actual wallet-signed refund_after_dispute_timeout; 0.1 test GEN returned to original client; 0 GEN remains in escrow."],
+  ["LIVE: refunded escrow contract", "https://explorer-bradbury.genlayer.com/address/0x30D7B14756ED2b062f7f39F8240F0FC0C3533950", "Bradbury get_job(): resolved, escrow_wei 0, decision dispute_timeout_refund."],
+  ["LIVE: newly created public job", "https://explorer-bradbury.genlayer.com/address/0xee6548ca1becb6797bd3a96b5249159c740f7c15", "Third genuine GenLayer job visible without a connected wallet in a fresh incognito browser."],
+  ["LIVE: on-chain shared directory", "https://explorer-bradbury.genlayer.com/address/0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8", "Public contract registry; verified work board discovers three independent real contract addresses."],
+  ["Wallet site permission fix (PR #17)", "https://github.com/maho0638/turnmaster-genlayer/pull/17", "Verified EIP-1193 MetaMask site disconnect using wallet_revokePermissions and eth_accounts; reports unsupported cases."],
+  ["Steward live-usage evidence (Oct 15)", "https://github.com/maho0638/turnmaster-genlayer/blob/main/docs/STEWARD_LIVE_EVIDENCE_2026_10_15.md", "Dates, roles, contract status, exact transactions, UI checks and reproduction procedure."],
   ["Updated escrow deployment (Oct 8)", "https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57", "Finalized contract deployment from the updated dispute-response and recovery implementation."],
   ["Legacy V1 contract", "https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482", "Older immutable job, before dispute retry/recovery rules."],
   ["Finalized deploy transaction", "https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403", "Consensus journey and finalized deployment transaction."],
@@ -69,12 +75,37 @@ export default function ReviewerPage() {
       </header>
 
       <section className={styles.liveProof}>
-        <div className={styles.liveBadge}>FINALIZED DEPLOYMENT</div>
+        <div className={styles.liveBadge}>LIVE REFUND FINALIZED · 15 OCTOBER 2026</div>
         <div className={styles.liveProofGrid}>
-          <div><span>Contract</span><a href="https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482" target="_blank" rel="noreferrer">0xAA85A41F899ED569d32B4CF0FDA2C55461d94482</a></div>
-          <div><span>Deploy transaction</span><a href="https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403" target="_blank" rel="noreferrer">0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403</a></div>
-          <div><span>Consensus result</span><b>FINALIZED · Bradbury 4221</b></div>
-          <div><span>Open in TurnMaster</span><Link href="/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482">Shareable contract view →</Link></div>
+          <div><span>Actual refunded escrow</span><a href="https://explorer-bradbury.genlayer.com/address/0x30D7B14756ED2b062f7f39F8240F0FC0C3533950" target="_blank" rel="noreferrer">0x30D7B14756ED2b062f7f39F8240F0FC0C3533950</a></div>
+          <div><span>Finalized refund transaction</span><a href="https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5" target="_blank" rel="noreferrer">0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5</a></div>
+          <div><span>Post-refund contract read</span><b>resolved · escrow 0 GEN · dispute_timeout_refund</b></div>
+          <div><span>Refunded amount</span><b>0.1 test GEN · original client · 0% fee</b></div>
+          <div><span>Open live contract</span><Link href="/?contract=0x30D7B14756ED2b062f7f39F8240F0FC0C3533950">Read finalized settlement in TurnMaster →</Link></div>
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeading}><span>LIVE</span><div><p>ACTUAL PRODUCT USAGE · VERIFIED BRADBURY STATE</p><h2>Three genuine jobs, two on-chain review rounds and a real refund</h2></div></div>
+        <div className={styles.twoCol}>
+          <article className={styles.card}>
+            <h3>Public jobs without mock data</h3>
+            <p>On 12 October a third genuine TurnMaster job was deployed at <a href="https://explorer-bradbury.genlayer.com/address/0xee6548ca1becb6797bd3a96b5249159c740f7c15" target="_blank" rel="noreferrer">0xee6548ca1becb6797bd3a96b5249159c740f7c15</a>. The on-chain shared directory at <a href="https://explorer-bradbury.genlayer.com/address/0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8" target="_blank" rel="noreferrer">0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8</a> exposed all three verified contracts to a visitor in Chrome Incognito without a wallet. Each displayed job is independently read with <code>get_job()</code>; no sample job cards are synthesized.</p>
+            <p>Observed board snapshot: 3 contracts; one newly open job; one legacy resolved job; one dispute-recovery job (now resolved). These are on-chain job counts, not a claimed number of users or page visits.</p>
+          </article>
+          <article className={styles.card}>
+            <h3>Real seven-day refund</h3>
+            <p>The upgraded escrow was funded with <b>0.1 test GEN</b>, claimed by a separate worker wallet, delivered, disputed with evidence from both parties, reviewed twice as <code>undetermined</code> with one allowed retry, and left locked until its fixed seven-day deadline.</p>
+            <p>On <b>15 October 2026</b>, <a href="https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5" target="_blank" rel="noreferrer">the actual refund transaction</a> finalized. Direct Bradbury contract readback confirmed <code>status=resolved</code>, <code>escrow_wei=0</code>, and <code>outcome=dispute_timeout_refund</code>. The original client received the <b>full 0.1 test GEN</b> without a platform fee.</p>
+          </article>
+          <article className={styles.card}>
+            <h3>Wallet issue addressed and tested</h3>
+            <p>TurnMaster no longer invokes the GenLayer SDK wallet-connect helper that requests <code>wallet_getSnaps</code>. Fresh MetaMask connection on Bradbury 4221 succeeded with no such error in the inspected browser console. Disconnect now requests removal of <code>eth_accounts</code> permission and independently verifies the result; the tested MetaMask permissions panel was empty afterwards.</p>
+          </article>
+          <article className={styles.card}>
+            <h3>Scope and honest limits</h3>
+            <p>These are manually exercised testnet flows, public contract reads, and repository tests. TurnMaster does <b>not</b> claim independent customer counts, sustained active users, production/mainnet use, or real-money payouts. The wallet and browser evidence comes from the tested Chrome/MetaMask setup; no claim is made that all browser extensions behave identically.</p>
+          </article>
         </div>
       </section>
 
@@ -124,6 +155,8 @@ export default function ReviewerPage() {
           <li><b>Submit delivery evidence.</b> The worker records a delivery description and public HTTPS evidence links.</li>
           <li><b>Choose the review path.</b> The client can accept directly, request a revision, or open a dispute. In a dispute, either party can add evidence.</li>
           <li><b>Run GenLayer review.</b> Verify the stored decision report, criterion verdicts, final contract state, Explorer transaction and any triggered settlement transaction.</li>
+          <li><b>Verify the public directory.</b> Open the work board in a fresh Chrome Incognito window without connecting a wallet; it shows three individually verified GenLayer jobs, including the new 12 October contract.</li>
+          <li><b>Verify the real refund.</b> Open <a href="https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5" target="_blank" rel="noreferrer">the 15 October finalized transaction</a> and check the upgraded contract: <code>resolved</code>, <code>escrow_wei=0</code>, <code>dispute_timeout_refund</code>.</li>
         </ol>
         <div className={styles.expected}><span>EXPECTED RESULT</span><p>A successful path ends with a Bradbury contract whose immutable terms, delivery evidence, decision report and terminal state can be re-read by address. A disputed all-pass review releases to the worker; a verified fail refunds the client; unverifiable evidence produces <b>undetermined</b> and no payout.</p></div>
       </section>
@@ -132,7 +165,7 @@ export default function ReviewerPage() {
         <div className={styles.sectionHeading}><span>07</span><div><p>WHAT IS VERIFIED</p><h2>Automated evidence, with limits stated</h2></div></div>
         <div className={styles.twoCol}>
           <article className={styles.card}><h3>Automated checks</h3><ul><li>ESLint and TypeScript</li><li>Network and wallet-provider unit tests</li><li>Contract/public-source identity</li><li>GenVM contract lint</li><li>Live Bradbury RPC smoke test</li><li>No-broadcast live deployment preflight</li><li>Share-link and audit-receipt tests</li><li>Next.js production build + reviewer-route HTTP smoke</li><li>GenLayer direct-mode contract lifecycle tests</li></ul></article>
-          <article className={styles.card}><h3>Current honest limit</h3><p>Real Bradbury testing completed an upgraded deployment, 0.1 GEN funding, claim, delivery, two-party dispute evidence, one retry, and two finalized Undetermined consensus decisions; the 0.1 GEN remained locked as required. The seven-day timeout refund was verified using controlled-time direct contract tests but has not yet been executed live. New deployments still require a funded Bradbury wallet and wallet approval.</p></article>
+          <article className={styles.card}><h3>Current verified scope</h3><p>Actual Bradbury testing includes deployment, funding with 0.1 test GEN, separate-wallet claim, delivery, both-party dispute evidence, one retry, two finalized Undetermined decisions, and an actual FINALIZED 15 October seven-day full client refund. The contract now reads resolved with 0 escrow. No real-money funds or independent visitor analytics are claimed. New signed actions still require a test wallet and explicit wallet approval.</p></article>
         </div>
       </section>
 

@@ -18,6 +18,17 @@ test("project proof manifest exposes the public reviewer surface", () => {
   assert.equal(proof.verifiedDeployment.status, "FINALIZED");
   assert.equal(proof.verifiedDeployment.address, "0xAA85A41F899ED569d32B4CF0FDA2C55461d94482");
   assert.equal(proof.verifiedDeployment.transaction, "0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403");
+  assert.equal(proof.verifiedLiveRefund.status, "FINALIZED");
+  assert.equal(proof.verifiedLiveRefund.transaction, "0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5");
+  assert.equal(proof.verifiedLiveRefund.escrowAddress, "0x30D7B14756ED2b062f7f39F8240F0FC0C3533950");
+  assert.equal(proof.verifiedLiveRefund.amountWei, "100000000000000000");
+  assert.equal(proof.verifiedLiveRefund.postStatus, "resolved");
+  assert.equal(proof.verifiedLiveRefund.postEscrowWei, "0");
+  assert.equal(proof.verifiedLiveRefund.outcome, "dispute_timeout_refund");
+  assert.equal(proof.sharedDirectory.status, "LIVE");
+  assert.equal(proof.sharedDirectory.verifiedRealJobs, 3);
+  assert.equal(proof.sharedDirectory.newJobAddress, "0xee6548ca1becb6797bd3a96b5249159c740f7c15");
+
 });
 
 test("reviewer page covers GenLayer differentiation and the full lifecycle", () => {
@@ -42,7 +53,7 @@ test("reviewer documentation states the final end-to-end limitation instead of o
   const guide = read("docs/REVIEWER_GUIDE.md");
   const security = read("docs/SECURITY_MODEL.md");
   assert.match(guide, /seven-day timeout refund/i);
-  assert.match(security, /remaining live gap is the \*\*seven-day full-refund transition\*\*/i);
+  assert.match(security, /15 October 2026.*completed.*live/i);
 });
 
 test("transient information notices auto-dismiss", () => {
@@ -55,7 +66,10 @@ test("reviewer proof links the finalized Bradbury deployment", () => {
   const page = read("app/reviewer/page.tsx");
   assert.ok(page.includes("0xAA85A41F899ED569d32B4CF0FDA2C55461d94482"));
   assert.ok(page.includes("0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403"));
-  assert.ok(page.includes("FINALIZED DEPLOYMENT"));
+  assert.ok(page.includes("LIVE REFUND FINALIZED"));
+  assert.ok(page.includes("0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5"));
+  assert.ok(page.includes("0xee6548ca1becb6797bd3a96b5249159c740f7c15"));
+  assert.ok(page.includes("wallet_getSnaps"));
 });
 
 test("premium dashboard keeps a high-contrast TurnMaster brand and dark verification UI", () => {

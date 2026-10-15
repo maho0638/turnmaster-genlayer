@@ -62,7 +62,7 @@ Opening a dispute records immutable first-dispute recovery and round-specific ev
 - Evidence is public HTTPS content and is treated as untrusted input.
 - Model output is untrusted until it passes contract-side structure and verdict checks.
 - The app has no private key storage and no server-side custody.
-- Sample board records are explicitly marked and never presented as live on-chain data.
+- The public board has no seeded mock/sample jobs. Contract address pointers come from pinned verified addresses, personal browser imports, or the LIVE shared directory `0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8`. Displayed job data comes exclusively from successful Bradbury `get_job()` calls.
 
 ## Bradbury transaction handling
 

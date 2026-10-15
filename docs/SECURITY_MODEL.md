@@ -51,5 +51,5 @@ TurnMaster is testnet software. It is not legal arbitration and must not be used
 
 - Public web evidence can change after submission; TurnMaster currently records URLs, not immutable content archives.
 - In the new contract revision, `undetermined` has one bounded retry and a fixed 7-day full refund recovery path. Previous on-chain deployments are immutable and do not inherit this rule.
-- A new upgraded Bradbury contract has a finalized deployment, funding, claim, delivery, two-party dispute evidence, one retry, and two inconclusive consensus reviews. The remaining live gap is the **seven-day full-refund transition**; controlled-time direct tests cover it, but no signed live timeout refund has completed.
+- A new upgraded Bradbury contract has a finalized deployment, funding, claim, delivery, two-party dispute evidence, one retry, and two inconclusive consensus reviews. On **15 October 2026 the full seven-day refund completed live** as a signed finalized transaction: `0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5`, readback `resolved`, escrow `0`, `dispute_timeout_refund`. Controlled-time direct tests independently cover premature and repeated refunds. These facts do not prove every possible wallet, mainnet, or success-payout path.
 - Testnet validator/model behavior is external infrastructure and can change independently of the app.
