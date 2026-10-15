@@ -47,7 +47,7 @@ The integration uses the stable SDK's Bradbury preset and methods for contract d
 
 ## Contract behavior
 
-`contracts/TurnMasterEscrow.py` implements a single milestone and immutable job terms per deployment. It checks positive reward, nonempty and sufficiently specific criteria, valid deadline, exact client funding, role authorization, delivery and evidence shape, and one settlement. Release commission is configured in basis points at deployment. The contract queues transfers through GenLayer's EVM recipient interface. The app does not claim those transfers were tested on a live network.
+`contracts/TurnMasterEscrow.py` implements a single milestone and immutable job terms per deployment. It checks positive reward, nonempty and sufficiently specific criteria, valid deadline, exact client funding, role authorization, delivery and evidence shape, and one settlement. Release commission is configured in basis points at deployment. The contract queues transfers through GenLayer's EVM recipient interface. The seven-day refund path was subsequently exercised as an actual finalized Bradbury client refund on 15 October 2026; other payout paths are not claimed live unless separately evidenced.
 
 For disputes, the contract retrieves the public evidence URLs and asks GenLayer to evaluate each frozen criterion. If evidence cannot be retrieved, responds with HTTP 4xx/5xx, is empty, or the output is unusable, it records `undetermined` and queues no immediate payout. Upgraded contracts permit one retry and eventually a fixed-time full refund. Resolution requires one of the job's parties. A successful release pays the worker less the configured fee; a refund pays the client without a fee. A second settlement attempt is rejected.
 
@@ -72,11 +72,17 @@ The suite pins the direct runner to runtime `v0.2.12` because the then-current t
 5. Review the deployed contract address and Explorer transaction link. Use the separate **Fund** action to deposit exactly the agreed reward; the app then verifies the finalized transaction and re-reads escrow state.
 6. Continue with claim, delivery, review, and dispute actions. Each signed action shows the network, contract address, value, purpose, and fee prompt before opening the wallet.
 
-The optional shared on-chain board uses `contracts/TurnMasterDirectory.py`. Deploy it to Bradbury, seed it with the already-published TurnMaster addresses, set `NEXT_PUBLIC_TURNMASTER_DIRECTORY_ADDRESS` to its address in the public app build, and deploy that build before shared discovery is active. New job contracts then enqueue a finalized registration call to the directory; the board verifies each listed job directly with `get_job()` and reads the latest 100 directory entries. Without that configured directory deployment, retain the job address or share its link to re-open it. Never enter or commit a private key or seed phrase. Use only testnet GEN. This is not ready for real funds and is not legal arbitration.
+The LIVE shared on-chain board uses `contracts/TurnMasterDirectory.py`. Its Bradbury address is `0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8`, which is configured in production as `NEXT_PUBLIC_TURNMASTER_DIRECTORY_ADDRESS`. The directory was seeded with existing TurnMaster addresses and a newly deployed job was found by a clean browser. To set up a different environment, deploy a new directory and configure its public address. New job contracts then enqueue a finalized registration call to the directory; the board verifies each listed job directly with `get_job()` and reads the latest 100 directory entries. Without that directory setting in another environment, retain each job address or share its link to re-open it. Never enter or commit a private key or seed phrase. Use only testnet GEN. This is not ready for real funds and is not legal arbitration.
+
+## Latest verified steward proof (15 October 2026)
+
+- [Finalized 0.1 test GEN client refund](https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5): `refund_after_dispute_timeout()`, `resolved`, `escrow_wei=0` and no platform fee.
+- [Upgraded escrow contract](https://explorer-bradbury.genlayer.com/address/0x30D7B14756ED2b062f7f39F8240F0FC0C3533950); [public directory](https://explorer-bradbury.genlayer.com/address/0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8); [third genuinely deployed job](https://explorer-bradbury.genlayer.com/address/0xee6548ca1becb6797bd3a96b5249159c740f7c15) discovered in wallet-free incognito.
+- [Detailed live-use and MetaMask remediation evidence](docs/STEWARD_LIVE_EVIDENCE_2026_10_15.md). No independent visitor-analytics numbers are claimed.
 
 ## Reviewer proof and Portal-ready evidence
 
-For stewards and GenLayer Portal reviewers, the production build now includes a dedicated read-only proof surface at [turnmaster-genlayer.vercel.app/reviewer](https://turnmaster-genlayer.vercel.app/reviewer). It explains the contract lifecycle, consensus path, safety invariants, public artifacts, wallet prerequisites, and test evidence. The seven-day live refund is still pending, while time-advanced direct contract tests cover recovery.
+For stewards and GenLayer Portal reviewers, the production build now includes a dedicated read-only proof surface at [turnmaster-genlayer.vercel.app/reviewer](https://turnmaster-genlayer.vercel.app/reviewer). It explains the contract lifecycle, consensus path, safety invariants, public artifacts, wallet prerequisites, and test evidence. The seven-day **actual signed full client refund finalized on 15 October 2026**; direct contract tests additionally cover early calls and idempotency. See [the verified live evidence report](docs/STEWARD_LIVE_EVIDENCE_2026_10_15.md).
 
 Submission and technical evidence are kept with the source:
 
@@ -93,12 +99,12 @@ The reviewer materials distinguish genuine Bradbury transactions, controlled-tim
 ## Known limitations
 
 - An upgraded TurnMasterEscrow deployment and two inconclusive dispute reviews were verified on Bradbury, including a funded 0.1 GEN escrow and one retry. See the steward remediation report for verified transaction references.
-- The seven-day live timeout refund has not been executed; its conditions and full recovery were tested using controlled-time direct GenVM tests. New deployments still require a connected, funded Bradbury wallet and explicit approval.
-- Shared discovery is inactive until the directory contract is deployed and its public address is configured in a build delivered to visitors. The source code supports it, but this repository alone cannot publish that on-chain address.
+- The seven-day timeout refund **has been executed and finalized** with a real client-signed Bradbury transaction on 15 October 2026; escrow reads zero afterwards. Further deployments still require a test GEN wallet and explicit approval.
+- Shared discovery is LIVE: directory `0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8` is configured in the production build; the 12 October newly deployed job was verified visible alongside the other two in wallet-free Chrome Incognito. Only the most recent 100 directory entries are requested.
 - The stable app interface uses public URLs for evidence and has no private-document upload or storage feature.
 - The original deployed V1 is immutable and does not have undetermined-dispute recovery. The main branch now has the upgraded contract; newly deployed jobs use the 48-hour evidence-response rule, one retry, and fixed seven-day refund.
 - Non-zero release commission is unavailable until a valid fee recipient is configured in the deployment environment. Zero-fee jobs are allowed.
-- Browser-based desktop/mobile, keyboard, assistive-technology, and WebMCP runtime checks have not been completed; see the QA report.
+- A fresh real Chrome + MetaMask connection and permission-disconnect check passed; comprehensive mobile, accessibility, other-wallet and WebMCP testing is still not claimed. See the QA report.
 
 
 ## Pro verification features

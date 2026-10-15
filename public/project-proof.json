@@ -39,13 +39,16 @@
     "direct-mode-contract-tests",
     "genvm-contract-lint",
     "share-link-and-proof-receipt-tests",
-    "reviewer-route-smoke"
+    "reviewer-route-smoke",
+    "wallet-permission-revocation-tests",
+    "onchain-shared-directory-readback"
   ],
   "limitations": [
     "testnet-only",
     "no-real-funds",
     "no-legal-arbitration",
-    "finalized-deploy-proven-full-signed-lifecycle-still-required"
+    "real-user-analytics-not-collected",
+    "metamask-behavior-verified-in-one-real-chrome-environment"
   ],
   "verifiedDeployment": {
     "status": "FINALIZED",
@@ -54,5 +57,35 @@
     "contractExplorer": "https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482",
     "transactionExplorer": "https://explorer-bradbury.genlayer.com/tx/0xf9124e7e20d71add986925697caa3e0cca697ef303c6ba409754c0ba17082403",
     "shareableApp": "https://turnmaster-genlayer.vercel.app/?contract=0xAA85A41F899ED569d32B4CF0FDA2C55461d94482"
+  },
+  "sharedDirectory": {
+    "status": "LIVE",
+    "address": "0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8",
+    "verifiedRealJobs": 3,
+    "newJobAddress": "0xee6548ca1becb6797bd3a96b5249159c740f7c15",
+    "newJobTitle": "TurnMaster Public Directory Test 03",
+    "visitorCheck": "incognito-without-wallet",
+    "verifiedAt": "2026-10-12"
+  },
+  "verifiedLiveRefund": {
+    "status": "FINALIZED",
+    "date": "2026-10-15",
+    "transaction": "0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5",
+    "transactionExplorer": "https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5",
+    "escrowAddress": "0x30D7B14756ED2b062f7f39F8240F0FC0C3533950",
+    "client": "0x341D64930E59D630FC89Bb24B116a183883D34b4",
+    "amountWei": "100000000000000000",
+    "amountGen": "0.1",
+    "postStatus": "resolved",
+    "postEscrowWei": "0",
+    "postEscrowBalanceWei": "0",
+    "outcome": "dispute_timeout_refund",
+    "commissionGen": "0",
+    "retryCount": 1,
+    "reviewRounds": 2
+  },
+  "browserEvidence": {
+    "walletGetSnaps": "not_observed_in_tested_live_Chrome_MetaMask_connect",
+    "disconnect": "eth_accounts_permission_revoked_and_confirmed_in_tested_MetaMask"
   }
 }

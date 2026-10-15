@@ -1,4 +1,4 @@
-# TurnMaster reviewer guide — 10 October 2026
+# TurnMaster reviewer guide — updated 15 October 2026
 
 TurnMaster is an escrow and evidence-review workflow on **GenLayer Bradbury Testnet (chain 4221)**. It does not support real funds. Start at https://turnmaster-genlayer.vercel.app or the read-only https://turnmaster-genlayer.vercel.app/reviewer page.
 
@@ -31,17 +31,19 @@ The automated deploy-readiness regression suite covers disconnected wallet, wron
 
 ## Current verified on-chain evidence
 
-- **Upgraded live contract:** use the verified full contract address from the GenLayer Portal submission or the wallet-confirmed deploy receipt. Do not reconstruct it from the shortened UI label.
+- **Upgraded live contract:** https://explorer-bradbury.genlayer.com/address/0x30D7B14756ED2b062f7f39F8240F0FC0C3533950 (full escrow address `0x30D7B14756ED2b062f7f39F8240F0FC0C3533950`).
 - **Upgraded deployment:** https://explorer-bradbury.genlayer.com/tx/0xdfd81b89a9eff23899cde18b9790bb2c70b7b15adce60cf936c1e61a9783dc57
 - **First inconclusive review:** https://explorer-bradbury.genlayer.com/tx/0xb8415c4497f15fd0d52785dd17f07d4afbeebb20055da3ca0193b6e1f4758744
 - **Retry:** https://explorer-bradbury.genlayer.com/tx/0x634bfff46cf3d89e7504195ac38ee7283f4e3183cf7057f2d152cf0a560356b4
+- **ACTUAL finalized seven-day refund (15 October):** https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5. Contract reads `resolved`, `escrow_wei=0`, decision `dispute_timeout_refund`; full 0.1 test GEN returned to the client without commission.
+- **On-chain shared directory:** https://explorer-bradbury.genlayer.com/address/0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8. Three genuine jobs visible without wallet in fresh Chrome Incognito, including [newly deployed job](https://explorer-bradbury.genlayer.com/address/0xee6548ca1becb6797bd3a96b5249159c740f7c15).
 - **Old/legacy contract (cannot be upgraded):** https://explorer-bradbury.genlayer.com/address/0xAA85A41F899ED569d32B4CF0FDA2C55461d94482
 
-The upgraded job had **0.1 test GEN in escrow**, two finalized `undetermined` decisions, evidence submitted by both parties, and one successful retry. An undetermined verdict did not release the funds; the recovery deadline remained unchanged.
+The upgraded job **held 0.1 test GEN in escrow before** the fixed deadline, had two finalized `undetermined` decisions, evidence from both parties and one successful retry. At the 15 October deadline it underwent an actual, signed, FINALIZED full refund; the post-settlement escrow is now **0 GEN**.
 
 ## Honest limits
 
-The **seven-day timeout refund** and early one-sided resolution rejections were proven in **controlled-time direct contract tests**, not by waiting seven real days and signing a live refund. The testnet escrow still awaiting that deadline must not be misrepresented as already refunded.
+The **seven-day timeout refund is proven twice in different ways**: early/late and double-settlement rules in controlled-time direct contract tests, **and a genuine client-signed full refund on Bradbury finalized on 15 October 2026**. The upgraded escrow is resolved and empty. Early one-sided rejection itself is evidenced in direct tests, not as a separate malicious live-chain attempt.
 
 Live signing, testnet GEN acquisition and chain configuration remain external prerequisites for *new* deployments. A read-only on-chain proof cannot replace a new signed deployment. CI results prove code and mock-time recovery paths, not an external reviewer's funded-wallet availability.
 
@@ -50,11 +52,12 @@ Live signing, testnet GEN acquisition and chain configuration remain external pr
 - Source: https://github.com/maho0638/turnmaster-genlayer/blob/main/contracts/TurnMasterEscrow.py
 - Tests: https://github.com/maho0638/turnmaster-genlayer/blob/main/tests/test_contract_direct.py
 - CI: https://github.com/maho0638/turnmaster-genlayer/actions
-- Steward fix report: https://github.com/maho0638/turnmaster-genlayer/blob/main/docs/STEWARD_REMEDIATION_2026_10_08.md
+- Current verified user testing and full refund: https://github.com/maho0638/turnmaster-genlayer/blob/main/docs/STEWARD_LIVE_EVIDENCE_2026_10_15.md
+- Historical steward fix report: https://github.com/maho0638/turnmaster-genlayer/blob/main/docs/STEWARD_REMEDIATION_2026_10_08.md
 - Network documentation: https://docs.genlayer.com/developers/networks
 
 ## Steward follow-up: real data only
 
-As of the real-data remediation, the public dashboard no longer initializes with five illustrative jobs or permits session-only drafts to appear alongside blockchain work. A fresh browser discovers independently confirmed TurnMaster Bradbury addresses from `lib/public-contracts.mjs`; the addresses are pointers, NOT content. Every displayed title, reward, criteria, escrow balance, delivery and status is read using GenLayer `get_job()` directly from that deployed contract. Failed RPC reads display an error/empty state, not fabricated jobs. Visitors can import and inspect additional Bradbury contracts using **Open contract** without a wallet. The public registry is limited to known published contract addresses; it is not a general blockchain indexer for every new deployment. No wallet signature is required for read-only inspection.
+As of the real-data remediation, the public dashboard no longer initializes with five illustrative jobs or permits session-only drafts to appear alongside blockchain work. A fresh browser discovers independently confirmed TurnMaster Bradbury addresses from `lib/public-contracts.mjs`; the addresses are pointers, NOT content. Every displayed title, reward, criteria, escrow balance, delivery and status is read using GenLayer `get_job()` directly from that deployed contract. Failed RPC reads display an error/empty state, not fabricated jobs. Visitors can import and inspect additional Bradbury contracts using **Open contract** without a wallet. The production shared directory has since been deployed and activated. It currently indexes three TurnMaster contracts, including a new job automatically visible in an incognito window; the board still only reads verified listed jobs, not every unrelated contract on the chain. No wallet signature is required for read-only inspection.
 
-The pinned `genlayer-js` package contains a Snap request in its separate wallet `connect()` helper. TurnMaster does not call that helper: read-only calls use an account-free client, while signed calls use the normal EIP-1193 `eth_requestAccounts` flow and a provider-backed client. Repository tests assert that application code does not call `connect()` or request wallet Snaps. The steward's browser error still requires reproduction with the exact deployed build and wallet extension before claiming the external MetaMask issue is closed.
+The pinned `genlayer-js` package contains a Snap request in its separate wallet `connect()` helper. TurnMaster does not call that helper: read-only calls use an account-free client, while signed calls use the normal EIP-1193 `eth_requestAccounts` flow and a provider-backed client. Repository tests assert that application code does not call `connect()` or request wallet Snaps. The steward's `wallet_getSnaps` issue was subsequently retested with a fresh real Chrome+MetaMask connection on the live site, with no such error in the visible console. The site permission revocation was also tested on a real MetaMask UI. These observations are specific to the tested browser configuration, not a guarantee about all extensions.

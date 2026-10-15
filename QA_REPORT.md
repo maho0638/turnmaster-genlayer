@@ -1,58 +1,30 @@
-# TurnMaster QA report — 11 October 2026
+# TurnMaster QA and actual Bradbury evidence — 15 October 2026
 
-## Audit target
+This is the current status of the `main`-line TurnMaster on GenLayer Bradbury Testnet (4221). It supersedes the earlier 11 October *local worktree* assessment, which necessarily could not include later signed transactions. No fabricated usage statistics are claimed.
 
-This report covers the local worktree based on PR #13 branch `fix/real-onchain-board-steward`, base commit `4bdbda0a4cb13233b489030cd37fc7f784f3535f`, plus the uncommitted changes shown in `git status`. It does not describe a GitHub or Vercel deployment.
+## Live, independently readable evidence
 
-## Steward requirements checked
-
-- The public board initializes with an empty list. The only job details shown are constructed after a successful `get_job()` read for a configured, imported, or directory-listed contract. Read errors do not fall back to fabricated jobs.
-- The UI no longer calls its live-chain status chip a “sample”; styles and JSX use `chain-status-label`. This is a naming cleanup, not a data-flow change.
-- The pinned `genlayer-js` package includes a separate `connect()` helper that can request wallet Snaps. TurnMaster does not call that helper: reads use an account-free client and writes use the EIP-1193 provider directly. Static regression checks cover this path. An actual MetaMask extension reproduction against the current build was not available in this environment, so the steward's browser-specific `wallet_getSnaps` report is not claimed closed here.
-- Deployment recovery keeps a transaction hash until the finalized transaction, deployed contract address, and matching client are verified. Wallet lock, account, chain and native-balance checks are covered by unit tests.
-- Shared discovery is still conditional: a directory contract must be deployed and its address configured in the visitor-facing build. That deployment/configuration has not been performed here.
-- Live seven-day escrow recovery remains pending until the on-chain deadline and a signed refund can be verified. Controlled-time contract tests do not count as a live refund.
-
-## Local verification
-
-| Check | Result | Evidence / limitation |
+| Item | Verified result | Primary proof |
 | --- | --- | --- |
-| Clean Node install | PASS | `npm ci` completed with Node 24.19.0; project engine requires Node `>=22.13.0`. |
-| ESLint | PASS | `npm run lint` |
-| Full TypeScript | PASS | `npx tsc --noEmit` |
-| Targeted TypeScript safety checks | PASS | Included in `npm run test:network` |
-| JavaScript regression suite | PASS | `npm run test:regression`: 13 test files, 13 passed, 0 failed |
-| Network / wallet regression suite | PASS | `npm run test:network`: 9 test files passed, then strict safety type check passed |
-| Project proof | PASS | `npm run test:project-proof` |
-| Real-chain-only board assertions | PASS | `npm run test:real-board` |
-| Registry | PASS | `npm run test:registry` |
-| Contract proof | PASS | `npm run test:contract-proof` |
-| Python contract regressions | PASS | `tests/test_contract_direct.py` and `tests/test_directory_direct.py`: 30 passed |
-| GenVM contract lint | PASS; validation incomplete | `genvm-lint lint` passed for both escrow and directory contracts (3 checks each). `genvm-lint check` cannot complete SDK validation because `/root/.cache/genvm-linter` is read-only and the linter cannot fetch its GenVM artifact in this environment. |
-| `npm run build:vercel` local production build | PASS | Next.js 16.3.4 Turbopack compiled successfully, completed TypeScript, generated all static pages, and finalized the production build. This ran locally and did not contact Vercel. |
-| Local production HTTP smoke tests | PASS | Started `next start` on `127.0.0.1:3417`; `/`, `/reviewer`, `/project-proof.json`, and `/TurnMasterEscrow.py` each returned HTTP 200 and expected content. Server stopped after checks. |
-| Live Bradbury RPC, board RPC, deploy preflight | BLOCKED | All three read-only commands fail DNS resolution with `EAI_AGAIN` for `rpc-bradbury.genlayer.com`, including the elevated retry. No transaction was signed or broadcast. |
+| Public work board | 3 real `get_job()`-verified contracts, including a new job visible to Chrome Incognito without wallet | [New job](https://explorer-bradbury.genlayer.com/address/0xee6548ca1becb6797bd3a96b5249159c740f7c15), [directory](https://explorer-bradbury.genlayer.com/address/0x6b464bd8d036a4b034cdAac27d255c81BC5F53C8) |
+| New contract deploy | Third on-chain job finalized, reward advertised but never separately funded | [New job](https://explorer-bradbury.genlayer.com/address/0xee6548ca1becb6797bd3a96b5249159c740f7c15) |
+| MetaMask `wallet_getSnaps` | Fresh Chrome+MetaMask connection succeeded with no such console error in tested environment | [Wallet correction and regression](https://github.com/maho0638/turnmaster-genlayer/pull/17) |
+| MetaMask disconnect | Actual user MetaMask permissions page empty after TurnMaster disconnected; on-chain actions require reconnect | [Verified revoke helper](https://github.com/maho0638/turnmaster-genlayer/blob/main/lib/bradbury-wallet.mjs) |
+| Real disputed escrow | 0.1 test GEN funded, claimed from separate wallet, delivery and both-party evidence, two finalized `undetermined` decisions and one retry | [Escrow](https://explorer-bradbury.genlayer.com/address/0x30D7B14756ED2b062f7f39F8240F0FC0C3533950), [review](https://explorer-bradbury.genlayer.com/tx/0xb8415c4497f15fd0d52785dd17f07d4afbeebb20055da3ca0193b6e1f4758744), [retry](https://explorer-bradbury.genlayer.com/tx/0x634bfff46cf3d89e7504195ac38ee7283f4e3183cf7057f2d152cf0a560356b4) |
+| **Fixed seven-day full refund** | **Actual client-signed `FINALIZED`** 15 Oct: `resolved`, `escrow_wei=0`, `dispute_timeout_refund`, full 0.1 test GEN, zero platform fee | **[Refund tx](https://explorer-bradbury.genlayer.com/tx/0x8d058f49c23459533c262464435068e80716f415bcac14a3c2aed7981ca2e0e5)** |
 
-The production build shown in the user's Windows console succeeded on the earlier local copy. It is not counted as proof for the later uncommitted changes in this audit worktree.
+The original V1 resolved job at `0xAA85A41F899ED569d32B4CF0FDA2C55461d94482` has older immutable rules and must not be confused with the upgraded dispute contract.
 
-## Findings corrected during this audit
+## Test layers and limits
 
-- Removed obsolete README and QA claims that the dashboard showed example/sample records.
-- Corrected documentation that claimed browser-only drafts were available; the current interface has no draft action and never mixes drafts into the board.
-- Renamed the live status chip's CSS class from `sample-label` to `chain-status-label`, removed unused sample-card styles, and added regression assertions against restoring those misleading names.
-- Updated the reviewer guide to state precisely that the installed SDK contains a Snap-capable helper, while the app does not invoke it. The actual external MetaMask issue remains unverified.
-- Reworked the contract's invalid adjudication fallback to avoid raising a bare `ValueError`; invalid or malformed verdicts still deterministically become `unverifiable`.
-- The final contract-source parity test caught a stale public copy after the contract edit. Ran `scripts/sync-contract-source.mjs`; the source and public copy are now identical, and the parity regression test passes.
+- GitHub CI covers ESLint, full TypeScript, wallet/network tests (including rejected/unsupported/unchanged permission states), actual Bradbury RPC smoke, live read-only deployment preflight, regression tests, direct-mode Python contract tests, GenVM lint and Next.js build+HTTP route checks.
+- Contract direct-mode uses controlled time to test one-sided early resolution, invalid/mixed `fail` + `unverifiable` evidence, retry limits, early refund rejection and no double settlement. Separately, the actual signed 15 Oct Bradbury refund passed.
+- Browser evidence is a user-performed Chrome + MetaMask run, not generalized cross-browser automation.
+- New signed jobs require user wallet and test GEN. No mainnet, real-money, usage-analytics, third-party user volume or customer revenue claims.
+- All displayed public board data comes from successful live contract reads; failures do not substitute samples.
+- Read-only verification: [Reviewer proof](https://turnmaster-genlayer.vercel.app/reviewer) and [machine-readable project evidence](https://turnmaster-genlayer.vercel.app/project-proof.json).
+- Detailed per-step evidence and raw hashes: [Steward live evidence](docs/STEWARD_LIVE_EVIDENCE_2026_10_15.md).
 
-## Changed files
+## Follow-up distinction
 
-- `.github/workflows/verify.yml`, `package.json`, `scripts/sync-contract-source.mjs`
-- `README.md`, `QA_REPORT.md`, `docs/ARCHITECTURE.md`, `docs/REVIEWER_GUIDE.md`, `docs/SECURITY_MODEL.md`
-- `app/contract-workflow.tsx`, `app/page.tsx`, `app/globals.css`, `app/premium.module.css`
-- `contracts/TurnMasterEscrow.py`, `contracts/TurnMasterDirectory.py`, `public/TurnMasterEscrow.py`, `public/TurnMasterDirectory.py`
-- `lib/deploy-readiness.mjs`, `lib/genlayer-network.mjs`, `lib/turnmaster-chain.ts`, `lib/bradbury-wallet.mjs`, `lib/job-directory.mjs`, `lib/pending-deployment.mjs`, `lib/verified-board.mjs`
-- `tests/contract-source.test.mjs`, `tests/project-proof.test.mjs`, `tests/real-board.test.mjs`, `tests/bradbury-wallet.test.mjs`, `tests/job-directory.test.mjs`, `tests/pending-deployment.test.mjs`, `tests/test_directory_direct.py`, `tests/verified-board.test.mjs`, `tests/verified-board.typecheck.ts`, `tests/wallet-lock.test.mjs`
-
-## Current status
-
-The local production build, all JavaScript regressions, full TypeScript and ESLint, local production HTTP smoke tests, GenVM lint checks, and 30 direct contract tests pass. This audit cannot certify every external integration: live read-only checks were blocked by RPC DNS; current-build MetaMask behavior needs a real extension; shared discovery awaits a directory deployment/configuration; GenVM semantic validation awaits access to its cache/artifact; and the real seven-day refund awaits its deadline. No checks were weakened, and no chain write was attempted.
+The previous 8–11 October descriptions of the directory as inactive or timeout refund as pending were historical at the time. They are now outdated for the 15 October verified build and chain state. No additional contract deployment is required to inspect existing proofs.
